@@ -612,3 +612,59 @@ export function OsmosisInfoPanel() {
     </div>
   );
 }
+
+// ─── Emblem ───────────────────────────────────────────────────────────────────
+// Two-chamber osmosis diagram for the lesson card thumbnail.
+// Left = low solute (many water molecules), right = high solute (many orange dots),
+// with a net-flow arrow showing water crossing the membrane toward the hypertonic side.
+
+export function OsmosisEmblem({ className }: { className?: string }) {
+  const WATER    = "#3b82f6";
+  const SOLUTE   = "#f97316";
+  const MEMBRANE = "#7c3aed";
+
+  return (
+    <div className={className ?? "w-full h-full"}>
+      <svg viewBox="0 0 120 90" className="w-full h-full" aria-hidden="true">
+        {/* Chamber backgrounds */}
+        <rect x={0}  y={0} width={60}  height={90} fill="#eff6ff" rx={0} />
+        <rect x={60} y={0} width={60}  height={90} fill="#fff7ed" rx={0} />
+        <rect x={0}  y={0} width={120} height={90} fill="none"    rx={10}
+          stroke="#e2e8f0" strokeWidth={1} />
+
+        {/* Semipermeable membrane */}
+        <line x1={60} y1={0} x2={60} y2={90}
+          stroke={MEMBRANE} strokeWidth={2.5} strokeDasharray="6 4" opacity={0.65} />
+
+        {/* Left side — low solute, high water */}
+        <circle cx={14} cy={18} r={7} fill={WATER} fillOpacity={0.85} />
+        <circle cx={38} cy={12} r={7} fill={WATER} fillOpacity={0.85} />
+        <circle cx={22} cy={40} r={7} fill={WATER} fillOpacity={0.85} />
+        <circle cx={46} cy={48} r={7} fill={WATER} fillOpacity={0.85} />
+        <circle cx={12} cy={66} r={7} fill={WATER} fillOpacity={0.85} />
+        <circle cx={40} cy={74} r={7} fill={WATER} fillOpacity={0.85} />
+        {/* One solute on left */}
+        <circle cx={26} cy={26} r={8} fill={SOLUTE} fillOpacity={0.85} />
+
+        {/* Right side — high solute, low water */}
+        <circle cx={78}  cy={16} r={8} fill={SOLUTE} fillOpacity={0.85} />
+        <circle cx={104} cy={10} r={8} fill={SOLUTE} fillOpacity={0.85} />
+        <circle cx={90}  cy={38} r={8} fill={SOLUTE} fillOpacity={0.85} />
+        <circle cx={72}  cy={58} r={8} fill={SOLUTE} fillOpacity={0.85} />
+        <circle cx={108} cy={54} r={8} fill={SOLUTE} fillOpacity={0.85} />
+        <circle cx={86}  cy={76} r={8} fill={SOLUTE} fillOpacity={0.85} />
+        {/* One water on right */}
+        <circle cx={102} cy={72} r={7} fill={WATER} fillOpacity={0.85} />
+
+        {/* Net-flow arrow — water moves left → right toward high solute */}
+        <defs>
+          <marker id="oe-arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0,0 L0,7 L7,3.5 z" fill={WATER} />
+          </marker>
+        </defs>
+        <line x1={46} y1={45} x2={70} y2={45}
+          stroke={WATER} strokeWidth={3} markerEnd="url(#oe-arr)" />
+      </svg>
+    </div>
+  );
+}

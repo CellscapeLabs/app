@@ -772,3 +772,61 @@ export function CellMembranePanel() {
     </div>
   );
 }
+
+// ─── Emblem ───────────────────────────────────────────────────────────────────
+// Static phospholipid bilayer cross-section for the lesson card thumbnail.
+
+export function CellMembraneEmblem({ className }: { className?: string }) {
+  const HEAD  = "#7c3aed";
+  const TAIL  = "#db2777";
+  const PROT  = "#1d9e75";
+  const WATER = "#3b82f6";
+
+  const leftXs  = [10, 26, 42] as const;
+  const rightXs = [78, 94, 110] as const;
+  const allXs   = [...leftXs, ...rightXs];
+
+  return (
+    <div className={className ?? "w-full h-full"}>
+      <svg viewBox="0 0 120 90" className="w-full h-full" aria-hidden="true">
+        <rect width={120} height={90} fill="#f5f3ff" rx={10} />
+
+        {/* Channel protein — behind phospholipids so heads render in front */}
+        <rect x={52} y={8} width={16} height={74} rx={8}
+          fill={PROT} fillOpacity={0.8} />
+        <ellipse cx={60} cy={45} rx={4} ry={5} fill="white" fillOpacity={0.55} />
+
+        {/* Hydrophobic tails — top leaflet angles down, bottom angles up */}
+        {allXs.map((x, i) => (
+          <g key={`t${i}`}>
+            <line x1={x - 2.5} y1={28} x2={x - 1.5} y2={43}
+              stroke={TAIL} strokeWidth={1.8} strokeLinecap="round" />
+            <line x1={x + 2.5} y1={28} x2={x + 1.5} y2={43}
+              stroke={TAIL} strokeWidth={1.8} strokeLinecap="round" />
+            <line x1={x - 2.5} y1={62} x2={x - 1.5} y2={47}
+              stroke={TAIL} strokeWidth={1.8} strokeLinecap="round" />
+            <line x1={x + 2.5} y1={62} x2={x + 1.5} y2={47}
+              stroke={TAIL} strokeWidth={1.8} strokeLinecap="round" />
+          </g>
+        ))}
+
+        {/* Polar heads — top row */}
+        {allXs.map((x, i) => (
+          <circle key={`th${i}`} cx={x} cy={22} r={7.5} fill={HEAD} />
+        ))}
+        {/* Polar heads — bottom row */}
+        {allXs.map((x, i) => (
+          <circle key={`bh${i}`} cx={x} cy={68} r={7.5} fill={HEAD} />
+        ))}
+
+        {/* Water molecules above and below */}
+        <circle cx={20}  cy={6}  r={4} fill={WATER} fillOpacity={0.75} />
+        <circle cx={60}  cy={4}  r={4} fill={WATER} fillOpacity={0.75} />
+        <circle cx={100} cy={7}  r={4} fill={WATER} fillOpacity={0.75} />
+        <circle cx={20}  cy={84} r={4} fill={WATER} fillOpacity={0.75} />
+        <circle cx={60}  cy={86} r={4} fill={WATER} fillOpacity={0.75} />
+        <circle cx={100} cy={83} r={4} fill={WATER} fillOpacity={0.75} />
+      </svg>
+    </div>
+  );
+}
