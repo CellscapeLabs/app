@@ -132,7 +132,7 @@ export default function Home() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="relative mx-auto max-w-[1400px] px-6 pt-20 pb-10 lg:pt-28 lg:pb-6">
+      <section className="relative mx-auto max-w-[1400px] px-6 pt-10 pb-10 lg:pt-16 lg:pb-6">
         {/* Floating biology particles behind content */}
         <FloatingBioParticles />
 
@@ -290,7 +290,7 @@ export default function Home() {
         whileInView="show"
         viewport={viewportOpts}
         variants={fadeUp}
-        className="relative overflow-hidden py-28 text-center"
+        className="relative overflow-hidden py-16 text-center"
       >
         {/* Background gradient blob */}
         <div className="pointer-events-none absolute inset-0 -z-10"
