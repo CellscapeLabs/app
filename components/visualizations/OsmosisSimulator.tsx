@@ -304,9 +304,9 @@ function CellView({ extSolute }: CellViewProps) {
 
       {/* Normal-size reference ring */}
       <circle cx={CELL_CX} cy={CELL_CY} r={NORMAL_R}
-        fill="none" stroke="#94a3b8" strokeWidth={1} strokeDasharray="4 4" opacity={0.25} />
-      <text x={CELL_CX + NORMAL_R + 6} y={CELL_CY - 3} fontSize={14} fill="#94a3b8"
-        fontFamily="system-ui, sans-serif">normal</text>
+        fill="none" stroke="#64748b" strokeWidth={2} strokeDasharray="6 4" opacity={0.55} />
+      <text x={CELL_CX + NORMAL_R + 6} y={CELL_CY - 3} fontSize={14} fontWeight={600}
+        fill="#64748b" opacity={0.75} fontFamily="system-ui, sans-serif">normal</text>
 
       {/* Cell membrane — spring-animated radius */}
       <motion.circle
