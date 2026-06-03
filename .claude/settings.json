@@ -5,7 +5,8 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Read(//c/Users/thebo/AppData/Local/Temp/**)"
+      "Read(//c/Users/thebo/AppData/Local/Temp/**)",
+      "PowerShell(Rename-Item -Path \"c:\\\\src\\\\usecellscape\\\\usecellscape_lesson_checklist.html\" -NewName \"cellscape_lesson_checklist.html\")"
     ]
   }
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
+  CellMembraneProvider,
   CellMembraneViewer,
   CellMembranePanel,
 } from "@/components/visualizations/CellMembraneVisualization";
@@ -145,28 +146,25 @@ export default function CellMembranePage() {
               ))}
 
               {/* ── LOW side (lower-right) ── */}
-              {/* 2 faded dots above the label */}
-              {([{cx:560, cy:162}, {cx:600, cy:170}] as const).map((d, i) => (
+              {/* Dots sit clearly above the slope (bottom of each dot > 12 px above slope line) */}
+              {([{cx:568, cy:140}, {cx:592, cy:148}] as const).map((d, i) => (
                 <circle key={i} cx={d.cx} cy={d.cy} r={10}
                   fill="#10b981" fillOpacity={0.22} />
               ))}
-              {/* Label sits below the dots with clear space */}
-              <text x={580} y={204} textAnchor="middle" fontSize={15} fontWeight={800}
+              <text x={574} y={200} textAnchor="middle" fontSize={15} fontWeight={800}
                 fill="#9ca3af" fontFamily="system-ui, sans-serif">LOW concentration</text>
 
-              {/* ── Downhill arrow (left → right, below slope) ── */}
-              {/* Starts right of the HIGH dot cluster; ends left of the LOW dots.
-                  Curve dips below the slope line, so it visually travels downward. */}
-              <path d="M 210 88 C 340 130 460 162 548 174"
+              {/* ── Downhill arrow (left → right) ── */}
+              {/* Ends just left of the (moved-up) LOW dots */}
+              <path d="M 210 88 C 340 108 450 132 542 140"
                 fill="none" stroke="#059669" strokeWidth={2.5} strokeDasharray="8 4"
                 markerEnd="url(#arrowGreen)" />
-              <text x={378} y={162} textAnchor="middle" fontSize={13} fontWeight={700}
+              <text x={260} y={170} textAnchor="middle" fontSize={13} fontWeight={700}
                 fill="#059669" fontFamily="system-ui, sans-serif">⬇ Downhill — FREE (no ATP needed)</text>
 
-              {/* ── Uphill arrow (right → left, above slope) ── */}
-              {/* Starts left of the LOW dots; ends right of the HIGH dot cluster.
-                  Curve rises above the slope line, so it visually travels upward. */}
-              <path d="M 548 156 C 438 106 308 78 210 74"
+              {/* ── Uphill arrow (right → left) ── */}
+              {/* Starts just left of the LOW dots */}
+              <path d="M 542 132 C 432 98 306 72 210 70"
                 fill="none" stroke="#d97706" strokeWidth={2.5} strokeDasharray="8 4"
                 markerEnd="url(#arrowAmber)" />
               <text x={378} y={62} textAnchor="middle" fontSize={13} fontWeight={700}
@@ -225,6 +223,7 @@ export default function CellMembranePage() {
         </div>
 
         {/* ── Two-column interactive section ── */}
+        <CellMembraneProvider>
         <div className="lg:grid lg:grid-cols-[5fr_7fr] lg:gap-8 lg:items-start">
 
           {/* Left column — sticky viewer */}
@@ -336,15 +335,16 @@ export default function CellMembranePage() {
                 ← Organelles
               </Link>
               <Link
-                href="/topics/cell-biology"
+                href="/topics/cell-biology/osmosis"
                 className="rounded-full bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-600"
               >
-                Cell Biology →
+                Next: Osmosis →
               </Link>
             </div>
 
           </div>
         </div>
+        </CellMembraneProvider>
 
       </main>
     </div>

@@ -4,7 +4,7 @@
 // Diffusion, and Active Transport (Na⁺/K⁺ pump). Each view animates molecules moving across
 // the membrane to illustrate concentration gradients and energy requirements.
 
-import { useState, useRef } from "react";
+import { useState, createContext, useContext } from "react";
 import { motion, AnimatePresence, useAnimationFrame } from "framer-motion";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -42,6 +42,23 @@ interface Tab {
   accentBg: string;
   description: string;
   keyPoints: string[];
+}
+
+// ─── Shared active-tab context ────────────────────────────────────────────────
+// Both CellMembraneViewer and CellMembranePanel consume this so clicking a tab
+// in either component keeps the other in sync.
+
+interface CellMembraneCtxValue {
+  activeTab: TabId;
+  setActiveTab: (t: TabId) => void;
+}
+
+const CellMembraneCtx = createContext<CellMembraneCtxValue | null>(null);
+
+function useCellMembrane(): CellMembraneCtxValue {
+  const ctx = useContext(CellMembraneCtx);
+  if (!ctx) throw new Error("Must be inside CellMembraneProvider");
+  return ctx;
 }
 
 // ─── Region labels (shared across views) ─────────────────────────────────────
@@ -157,12 +174,14 @@ function BilayerView() {
         fontFamily="system-ui, sans-serif">(phosphate — loves water)</text>
 
       {/* ── Hydrophobic tails annotation ── */}
-      {/* Points at tail strand at x=70, midpoint y=144. Label sits in the left clear zone. */}
-      <line x1={73} y1={144} x2={32} y2={152}
+      {/* Label sits BELOW the bilayer (intracellular space). Arrow points UP into the tail zone.
+          x=35 is between phospholipid columns at x=14 and x=42, so no head circle blocks the path. */}
+      <line x1={40} y1={225} x2={35} y2={193}
         stroke="#db2777" strokeWidth={1.2} opacity={0.8} />
-      <text x={4} y={162} fontSize={13} fontWeight={700} fill="#db2777"
+      <polygon points="35,181 29,193 41,193" fill="#db2777" fillOpacity={0.75} />
+      <text x={4} y={236} fontSize={13} fontWeight={700} fill="#db2777"
         fontFamily="system-ui, sans-serif">Hydrophobic tails</text>
-      <text x={4} y={177} fontSize={11} fill="#db2777" opacity={0.8}
+      <text x={4} y={251} fontSize={11} fill="#db2777" opacity={0.8}
         fontFamily="system-ui, sans-serif">(fatty acids — repel water)</text>
 
       {/* ── Membrane protein annotation ── */}
@@ -372,79 +391,87 @@ function FacilitatedDiffusionView() {
 
 type PumpPhase = "bind-na" | "phosphorylate" | "release-na" | "bind-k" | "dephosphorylate" | "release-k";
 
+// Each phase is 2.5 s. A 0.5 s pause at the start of each animated phase lets students
+// read the label before movement begins. Static phases (phosphorylate, dephosphorylate)
+// simply hold their state for the full 2.5 s.
 const PUMP_PHASES: { id: PumpPhase; label: string; duration: number }[] = [
-  { id: "bind-na",         label: "3 Na⁺ bind (inside)",    duration: 1.0 },
-  { id: "phosphorylate",   label: "ATP → ADP + phosphate",   duration: 0.8 },
-  { id: "release-na",      label: "Na⁺ released (outside)",  duration: 1.0 },
-  { id: "bind-k",          label: "2 K⁺ bind (outside)",     duration: 1.0 },
-  { id: "dephosphorylate", label: "Phosphate released",       duration: 0.8 },
-  { id: "release-k",       label: "K⁺ released (inside)",    duration: 1.0 },
+  { id: "bind-na",         label: "① Na⁺ ions bind from inside the cell",     duration: 2.5 },
+  { id: "phosphorylate",   label: "② ATP splits — energy powers a shape change", duration: 2.5 },
+  { id: "release-na",      label: "③ Na⁺ released to the outside of the cell",  duration: 2.5 },
+  { id: "bind-k",          label: "④ K⁺ ions bind from outside the cell",       duration: 2.5 },
+  { id: "dephosphorylate", label: "⑤ Phosphate released — pump resets",         duration: 2.5 },
+  { id: "release-k",       label: "⑥ K⁺ released to the inside of the cell",    duration: 2.5 },
 ];
 
 const TOTAL_CYCLE = PUMP_PHASES.reduce((s, p) => s + p.duration, 0);
+const ANIM_PAUSE  = 0.5; // seconds held at start before ions move
 
 function ActiveTransportView() {
-  const pumpX = W / 2;
-  // Pump ry=44 → top at midY-44=116, bottom at midY+44=204 — pokes through head rows
-  const PUMP_RY = 44;
+  const pumpX   = W / 2;
+  const PUMP_RY = 44; // pump top at midY-44=116, bottom at midY+44=204
 
-  const tRef = useRef(0);
-  const [cycleT, setCycleT] = useState(0);
+  const [cycleT,   setCycleT]   = useState(0);
   const [phaseIdx, setPhaseIdx] = useState(0);
 
   useAnimationFrame((t) => {
-    tRef.current = (t / 1000) % TOTAL_CYCLE;
-    let acc = 0;
-    let idx = 0;
+    const ct = (t / 1000) % TOTAL_CYCLE;
+    let acc = 0, idx = 0;
     for (let i = 0; i < PUMP_PHASES.length; i++) {
       acc += PUMP_PHASES[i].duration;
-      if (tRef.current < acc) { idx = i; break; }
+      if (ct < acc) { idx = i; break; }
     }
-    setCycleT(tRef.current);
+    setCycleT(ct);
     setPhaseIdx(idx);
   });
 
-  function phaseProgress(idx: number) {
+  // Progress within a phase, with a leading pause so students can read the label first.
+  function phaseP(idx: number) {
     const start = PUMP_PHASES.slice(0, idx).reduce((s, p) => s + p.duration, 0);
-    return Math.max(0, Math.min(1, (cycleT - start) / PUMP_PHASES[idx].duration));
+    const elapsed = cycleT - start;
+    if (elapsed < ANIM_PAUSE) return 0;
+    return Math.max(0, Math.min(1, (elapsed - ANIM_PAUSE) / (PUMP_PHASES[idx].duration - ANIM_PAUSE)));
   }
 
-  // phase 2: release-na — Na⁺ exits through top of pump into extracellular space (upward)
-  const naProgress = phaseIdx === 2 ? phaseProgress(2) : 0;
-  // phase 5: release-k — K⁺ exits through bottom of pump into intracellular space (downward)
-  const kProgress  = phaseIdx === 5 ? phaseProgress(5) : 0;
-
-  // Pump conformation: open toward extracellular (top) when releasing Na⁺ or binding K⁺
+  // Pump opens toward extracellular (top) while Na⁺ exits and K⁺ enters (phases 2–4)
   const pumpOpenTop = phaseIdx >= 2 && phaseIdx <= 4;
+
+  const naBindP    = phaseIdx === 0 ? phaseP(0) : 0; // Na⁺ entering from inside
+  const naReleaseP = phaseIdx === 2 ? phaseP(2) : 0; // Na⁺ exiting to outside
+  const kBindP     = phaseIdx === 3 ? phaseP(3) : 0; // K⁺ entering from outside
+  const kReleaseP  = phaseIdx === 5 ? phaseP(5) : 0; // K⁺ exiting to inside
+
+  // Staggered ion helper: returns per-ion progress [0,1] with a small stagger delay
+  function ionP(base: number, i: number, stagger: number) {
+    const d = i * stagger;
+    return Math.max(0, Math.min(1, (base - d) / Math.max(0.01, 1 - d)));
+  }
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" aria-label="Na-K pump active transport diagram">
       <BilayerBase />
       <RegionLabels fontSize={11} />
 
-      {/* ── Ion concentration labels ── */}
-      {/* Extracellular region (top): high Na⁺, low K⁺ */}
+      {/* Ion concentration labels — extracellular (top) and intracellular (bottom) */}
       <text x={pumpX + 50} y={62} fontSize={12} fontWeight={700}
         fill={C.sodium} fontFamily="system-ui, sans-serif">High [Na⁺]</text>
       <text x={pumpX + 50} y={78} fontSize={11} fontWeight={600}
         fill={C.potassium} opacity={0.7} fontFamily="system-ui, sans-serif">Low [K⁺]</text>
-      {/* Intracellular region (bottom): high K⁺, low Na⁺ */}
       <text x={pumpX + 50} y={midY + 58} fontSize={12} fontWeight={700}
         fill={C.potassium} fontFamily="system-ui, sans-serif">High [K⁺]</text>
       <text x={pumpX + 50} y={midY + 74} fontSize={11} fontWeight={600}
         fill={C.sodium} opacity={0.7} fontFamily="system-ui, sans-serif">Low [Na⁺]</text>
 
-      {/* "ATP required" badge — top left, below region label */}
+      {/* ATP badge */}
       <rect x={8} y={30} width={116} height={28} rx={14}
         fill="#fef2f2" stroke="#fca5a5" strokeWidth={1.5} />
       <text x={66} y={49} textAnchor="middle" fontSize={12} fontWeight={700} fill="#dc2626"
         fontFamily="system-ui, sans-serif">ATP required</text>
 
-      {/* Pump body — ry=44 pokes 10px past each head row */}
+      {/* Pump body */}
       <ellipse cx={pumpX} cy={midY} rx={26} ry={PUMP_RY}
         fill={C.pump} fillOpacity={0.18} stroke={C.pump} strokeWidth={2.5} />
 
-      {/* Conformational opening */}
+      {/* Conformational opening — top or bottom depending on phase */}
       {pumpOpenTop ? (
         <ellipse cx={pumpX} cy={midY - PUMP_RY + 3} rx={11} ry={7}
           fill={C.pump} fillOpacity={0.28} stroke={C.pump} strokeWidth={1.5} />
@@ -453,23 +480,44 @@ function ActiveTransportView() {
           fill={C.pump} fillOpacity={0.28} stroke={C.pump} strokeWidth={1.5} />
       )}
 
-      {/* Pump label — left side, clear of ion labels on right */}
-      <line x1={pumpX - 26} y1={midY} x2={pumpX - 58} y2={midY - 28}
+      {/* Pump annotation — label sits above the membrane (outerTopY=126), well clear of the bilayer */}
+      <line x1={pumpX - 26} y1={midY} x2={pumpX - 62} y2={midY - 72}
         stroke={C.pump} strokeWidth={1.2} opacity={0.8} />
-      <text x={pumpX - 60} y={midY - 34} fontSize={13} fontWeight={700} fill={C.pump}
+      <text x={pumpX - 64} y={midY - 78} fontSize={13} fontWeight={700} fill={C.pump}
         textAnchor="end" fontFamily="system-ui, sans-serif">Na⁺/K⁺ ATPase</text>
-      <text x={pumpX - 60} y={midY - 19} fontSize={11} fill={C.pump} opacity={0.8}
+      <text x={pumpX - 64} y={midY - 63} fontSize={11} fill={C.pump} opacity={0.8}
         textAnchor="end" fontFamily="system-ui, sans-serif">3 Na⁺ out, 2 K⁺ in per ATP</text>
-
-      {/* P label inside pump */}
       <text x={pumpX} y={midY + 6} textAnchor="middle" fontSize={14} fontWeight={900}
         fill={C.pump} fontFamily="system-ui, sans-serif">P</text>
 
-      {/* Na⁺ ions released to extracellular (upward from top of pump) */}
-      {naProgress > 0 && [0, 1, 2].map((i) => {
-        const delay = i * 0.25;
-        const p = Math.max(0, Math.min(1, (naProgress - delay) / Math.max(0.01, 1 - delay * 0.3)));
-        const iy = (midY - PUMP_RY) - p * 80;
+      {/* ── Phase 0: Na⁺ rising from intracellular into pump bottom ── */}
+      {naBindP > 0 && [0, 1, 2].map((i) => {
+        const p  = ionP(naBindP, i, 0.18);
+        const iy = (midY + PUMP_RY + 62) - p * (PUMP_RY + 44); // 264 → 176
+        const ix = pumpX + (i - 1) * 18;
+        return (
+          <g key={i} opacity={Math.min(p * 5 + 0.15, 1)}>
+            <circle cx={ix} cy={iy} r={10} fill={C.sodium} fillOpacity={0.9} />
+            <text x={ix} y={iy + 4} textAnchor="middle" fontSize={9} fontWeight={700}
+              fill="white" fontFamily="system-ui, sans-serif">Na⁺</text>
+          </g>
+        );
+      })}
+
+      {/* ── Phase 1: Na⁺ held inside pump (static) ── */}
+      {phaseIdx === 1 && [0, 1, 2].map((i) => (
+        <g key={i}>
+          <circle cx={pumpX + (i - 1) * 18} cy={midY + 20} r={10}
+            fill={C.sodium} fillOpacity={0.9} />
+          <text x={pumpX + (i - 1) * 18} y={midY + 24} textAnchor="middle" fontSize={9}
+            fontWeight={700} fill="white" fontFamily="system-ui, sans-serif">Na⁺</text>
+        </g>
+      ))}
+
+      {/* ── Phase 2: Na⁺ ejected to extracellular (upward from pump top) ── */}
+      {naReleaseP > 0 && [0, 1, 2].map((i) => {
+        const p  = ionP(naReleaseP, i, 0.18);
+        const iy = (midY - PUMP_RY) - p * 84; // 116 → 32
         const ix = pumpX + (i - 1) * 22;
         return p > 0.01 ? (
           <g key={i} opacity={Math.min(p * 5, 1)}>
@@ -480,11 +528,34 @@ function ActiveTransportView() {
         ) : null;
       })}
 
-      {/* K⁺ ions released to intracellular (downward from bottom of pump) */}
-      {kProgress > 0 && [0, 1].map((i) => {
-        const delay = i * 0.3;
-        const p = Math.max(0, Math.min(1, (kProgress - delay) / Math.max(0.01, 1 - delay * 0.3)));
-        const iy = (midY + PUMP_RY) + p * 80;
+      {/* ── Phase 3: K⁺ descending from extracellular into pump top ── */}
+      {kBindP > 0 && [0, 1].map((i) => {
+        const p  = ionP(kBindP, i, 0.22);
+        const iy = (midY - PUMP_RY - 62) + p * (PUMP_RY + 44); // 54 → 142
+        const ix = pumpX + (i === 0 ? -14 : 14);
+        return (
+          <g key={i} opacity={Math.min(p * 5 + 0.15, 1)}>
+            <circle cx={ix} cy={iy} r={10} fill={C.potassium} fillOpacity={0.9} />
+            <text x={ix} y={iy + 4} textAnchor="middle" fontSize={9} fontWeight={700}
+              fill="white" fontFamily="system-ui, sans-serif">K⁺</text>
+          </g>
+        );
+      })}
+
+      {/* ── Phase 4: K⁺ held inside pump (static) ── */}
+      {phaseIdx === 4 && [0, 1].map((i) => (
+        <g key={i}>
+          <circle cx={pumpX + (i === 0 ? -14 : 14)} cy={midY - 20} r={10}
+            fill={C.potassium} fillOpacity={0.9} />
+          <text x={pumpX + (i === 0 ? -14 : 14)} y={midY - 16} textAnchor="middle"
+            fontSize={9} fontWeight={700} fill="white" fontFamily="system-ui, sans-serif">K⁺</text>
+        </g>
+      ))}
+
+      {/* ── Phase 5: K⁺ released to intracellular (downward from pump bottom) ── */}
+      {kReleaseP > 0 && [0, 1].map((i) => {
+        const p  = ionP(kReleaseP, i, 0.25);
+        const iy = (midY + PUMP_RY) + p * 84; // 204 → 288
         const ix = pumpX + (i === 0 ? -14 : 14);
         return p > 0.01 ? (
           <g key={i} opacity={Math.min(p * 5, 1)}>
@@ -495,10 +566,10 @@ function ActiveTransportView() {
         ) : null;
       })}
 
-      {/* Phase indicator strip at bottom */}
-      <rect x={4} y={H - 32} width={W - 8} height={28} rx={6}
+      {/* Phase indicator strip */}
+      <rect x={4} y={H - 36} width={W - 8} height={32} rx={6}
         fill="#fffbeb" stroke="#fde68a" strokeWidth={1} />
-      <text x={W / 2} y={H - 13} textAnchor="middle" fontSize={12} fontWeight={600}
+      <text x={W / 2} y={H - 15} textAnchor="middle" fontSize={12} fontWeight={600}
         fill="#92400e" fontFamily="system-ui, sans-serif">
         {PUMP_PHASES[phaseIdx].label}
       </text>
@@ -567,12 +638,23 @@ const TABS: Tab[] = [
   },
 ];
 
-// ─── Viewer ───────────────────────────────────────────────────────────────────
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 import type React from "react";
 
-export function CellMembraneViewer() {
+export function CellMembraneProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<TabId>("bilayer");
+  return (
+    <CellMembraneCtx.Provider value={{ activeTab, setActiveTab }}>
+      {children}
+    </CellMembraneCtx.Provider>
+  );
+}
+
+// ─── Viewer ───────────────────────────────────────────────────────────────────
+
+export function CellMembraneViewer() {
+  const { activeTab, setActiveTab } = useCellMembrane();
   const tab = TABS.find((t) => t.id === activeTab)!;
 
   return (
@@ -638,7 +720,7 @@ export function CellMembraneViewer() {
 }
 
 export function CellMembranePanel() {
-  const [activeTab, setActiveTab] = useState<TabId>("bilayer");
+  const { activeTab, setActiveTab } = useCellMembrane();
   const tab = TABS.find((t) => t.id === activeTab)!;
   const curIdx = TABS.findIndex((t) => t.id === activeTab);
 

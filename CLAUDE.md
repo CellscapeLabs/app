@@ -1,4 +1,4 @@
-# useCellscape — Claude Code project guide
+# Cellscape — Claude Code project guide
 
 ## What this app is
 An interactive biology education tool for students. The core differentiator is
@@ -30,7 +30,7 @@ biology students.
 ```
 
 ## Branch strategy
-- `main` → production (auto-deploys to usecellscape.com via Vercel)
+- `main` → production (auto-deploys to cellscape.app via Vercel)
 - `dev` → staging (auto-deploys to a Vercel preview URL)
 - Feature work → branch off `dev`, open PR back into `dev`
 - Only merge `dev` → `main` when stable and tested on the preview URL
@@ -41,12 +41,12 @@ branch protection is enabled.
 ## Vercel environments
 - **Production**: triggered by merges to `main`
 - **Preview**: triggered by every push to `dev` or any feature branch
-- Preview URLs follow the pattern: `usecellscape-git-branch-name.vercel.app`
+- Preview URLs follow the pattern: `cellscape-git-branch-name.vercel.app`
 - Test on the preview URL on mobile before merging to `main`
 
 ## Current phase: Phase 2 — Interactive lessons
 Core app is scaffolded. We are now building out the full AP-Biology lesson library.
-Progress is tracked in `usecellscape_lesson_checklist.html` at the repo root — open
+Progress is tracked in `cellscape_lesson_checklist.html` at the repo root — open
 it in a browser to see what's done and what's next.
 
 ## Roadmap summary
@@ -56,7 +56,7 @@ it in a browser to see what's done and what's next.
 4. **Phase 4** (month 6+): Teacher accounts, freemium model, AI-powered hints
 
 ## Lesson plan (AP-Bio scope) — 30 lessons
-Source of truth: `usecellscape_lesson_checklist.html`. Summary below for quick reference.
+Source of truth: `cellscape_lesson_checklist.html`. Summary below for quick reference.
 
 ### Cell biology
 | # | Lesson | Status |
@@ -64,8 +64,8 @@ Source of truth: `usecellscape_lesson_checklist.html`. Summary below for quick r
 | 1 | Mitosis | ✓ done |
 | 2 | Meiosis | ✓ done |
 | 3 | Organelles | ✓ done |
-| 4 | Cell membrane & transport | up next |
-| 5 | Osmosis & diffusion simulator | — |
+| 4 | Cell membrane & transport | ✓ done |
+| 5 | Osmosis & diffusion simulator | ✓ done |
 | 6 | Cellular respiration — ATP production | — |
 | 7 | Photosynthesis — light & dark reactions | — |
 | 8 | The cell cycle & checkpoints | — |
