@@ -81,7 +81,7 @@ function Molecule({ cx, cy, r, color, label, seed }: MoleculeProps) {
       transition={{ duration: 2 + (seed % 5) * 0.35, repeat: Infinity, ease: "linear" }}
     >
       <circle cx={cx} cy={cy} r={r} fill={color} fillOpacity={0.85} />
-      <text x={cx} y={cy + r * 0.45} textAnchor="middle" fontSize={r < 6 ? 6 : 7}
+      <text x={cx} y={cy + r * 0.42} textAnchor="middle" fontSize={9}
         fontWeight={700} fill="white" fontFamily="system-ui, sans-serif" pointerEvents="none">
         {label}
       </text>
@@ -102,14 +102,17 @@ function Membrane() {
         stroke={C.membrane} strokeWidth={2} strokeOpacity={0.5} strokeDasharray="9 6" strokeDashoffset={15} />
       {poreYs.map((py, i) => (
         <g key={i}>
-          <rect x={MX - 9} y={py - 9} width={18} height={18} rx={4}
+          <rect x={MX - 14} y={py - 12} width={28} height={24} rx={5}
             fill={C.membrane} fillOpacity={0.2} stroke={C.membrane} strokeWidth={1.5} />
-          <text x={MX} y={py + 4} textAnchor="middle" fontSize={8} fontWeight={800}
+          <text x={MX} y={py + 5} textAnchor="middle" fontSize={12} fontWeight={800}
             fill={C.membrane} fontFamily="system-ui, sans-serif">AQP</text>
         </g>
       ))}
-      <text x={MX} y={H - 6} textAnchor="middle" fontSize={11} fontWeight={600}
-        fill={C.membrane} opacity={0.7} fontFamily="system-ui, sans-serif">
+      {/* Label sits to the right of the membrane strip — not on top of it */}
+      <line x1={MX + 6} y1={H - 14} x2={MX + 18} y2={H - 14}
+        stroke={C.membrane} strokeWidth={1.2} opacity={0.5} />
+      <text x={MX + 22} y={H - 8} textAnchor="start" fontSize={14} fontWeight={600}
+        fill={C.membrane} opacity={0.8} fontFamily="system-ui, sans-serif">
         semipermeable membrane
       </text>
     </g>
@@ -146,10 +149,10 @@ function ChamberView({ leftSolute, rightSolute, crossPhases }: ChamberViewProps)
       <rect x={MX} y={0} width={MX} height={H}
         fill="#fff7ed" fillOpacity={0.25 + rightSolute * 0.05} />
 
-      <text x={MX / 2}       y={16} textAnchor="middle" fontSize={12} fontWeight={700}
-        fill="#94a3b8" fontFamily="system-ui, sans-serif" letterSpacing={0.8}>LEFT CHAMBER</text>
-      <text x={MX + MX / 2}  y={16} textAnchor="middle" fontSize={12} fontWeight={700}
-        fill="#94a3b8" fontFamily="system-ui, sans-serif" letterSpacing={0.8}>RIGHT CHAMBER</text>
+      <text x={MX / 2}       y={20} textAnchor="middle" fontSize={18} fontWeight={700}
+        fill="#94a3b8" fontFamily="system-ui, sans-serif" letterSpacing={0.6}>LEFT CHAMBER</text>
+      <text x={MX + MX / 2}  y={20} textAnchor="middle" fontSize={18} fontWeight={700}
+        fill="#94a3b8" fontFamily="system-ui, sans-serif" letterSpacing={0.6}>RIGHT CHAMBER</text>
 
       <Membrane />
 
@@ -158,7 +161,7 @@ function ChamberView({ leftSolute, rightSolute, crossPhases }: ChamberViewProps)
         const isSolute = i < leftN;
         return (
           <Molecule key={`L${i}`} cx={x} cy={y}
-            r={isSolute ? 7 : 5}
+            r={isSolute ? 9 : 7}
             color={isSolute ? C.solute : C.water}
             label={isSolute ? "S" : "W"}
             seed={i} />
@@ -170,7 +173,7 @@ function ChamberView({ leftSolute, rightSolute, crossPhases }: ChamberViewProps)
         const isSolute = i < rightN;
         return (
           <Molecule key={`R${i}`} cx={x} cy={y}
-            r={isSolute ? 7 : 5}
+            r={isSolute ? 9 : 7}
             color={isSolute ? C.solute : C.water}
             label={isSolute ? "S" : "W"}
             seed={i + 20} />
@@ -186,8 +189,8 @@ function ChamberView({ leftSolute, rightSolute, crossPhases }: ChamberViewProps)
         const opacity = phase < 0.12 ? phase / 0.12 : phase > 0.88 ? (1 - phase) / 0.12 : 1;
         return (
           <g key={`X${i}`} opacity={opacity}>
-            <circle cx={x} cy={crossY} r={5} fill={C.water} />
-            <text x={x} y={crossY + 3.5} textAnchor="middle" fontSize={6}
+            <circle cx={x} cy={crossY} r={7} fill={C.water} />
+            <text x={x} y={crossY + 3.5} textAnchor="middle" fontSize={9}
               fontWeight={700} fill="white" fontFamily="system-ui, sans-serif" pointerEvents="none">
               W
             </text>
@@ -205,17 +208,17 @@ function ChamberView({ leftSolute, rightSolute, crossPhases }: ChamberViewProps)
             stroke={C.water} strokeWidth={2.5} fill="none" markerEnd="url(#osm-arr)" />
           <text
             x={direction === "lr" ? MX + 34 : MX - 34}
-            y={H / 2 - 30}
-            textAnchor="middle" fontSize={11} fontWeight={700}
+            y={H / 2 - 32}
+            textAnchor="middle" fontSize={15} fontWeight={700}
             fill={C.water} fontFamily="system-ui, sans-serif">
             net H₂O flow
           </text>
         </g>
       ) : (
         <g>
-          <text x={MX} y={H / 2 - 20} textAnchor="middle" fontSize={14} fontWeight={700}
+          <text x={MX} y={H / 2 - 16} textAnchor="middle" fontSize={20} fontWeight={700}
             fill="#94a3b8" fontFamily="system-ui, sans-serif">⇌ Equilibrium</text>
-          <text x={MX} y={H / 2 - 4} textAnchor="middle" fontSize={11}
+          <text x={MX} y={H / 2 + 4} textAnchor="middle" fontSize={14}
             fill="#94a3b8" fontFamily="system-ui, sans-serif">no net water movement</text>
         </g>
       )}
@@ -270,12 +273,12 @@ function CellView({ extSolute }: CellViewProps) {
 
       {/* Solution background */}
       <rect x={0} y={0} width={W} height={H} fill="#eff6ff" fillOpacity={0.35} />
-      <text x={W - 10} y={16} textAnchor="end" fontSize={12} fontWeight={700}
-        fill="#94a3b8" fontFamily="system-ui, sans-serif" letterSpacing={0.8}>SOLUTION</text>
+      <text x={W - 10} y={20} textAnchor="end" fontSize={18} fontWeight={700}
+        fill="#94a3b8" fontFamily="system-ui, sans-serif" letterSpacing={0.6}>SOLUTION</text>
 
       {/* External solute */}
       {extDots.map(({ x, y }, i) => (
-        <Molecule key={`ES${i}`} cx={x} cy={y} r={6} color={C.solute} label="S" seed={i + 40} />
+        <Molecule key={`ES${i}`} cx={x} cy={y} r={8} color={C.solute} label="S" seed={i + 40} />
       ))}
 
       {/* Water arrows */}
@@ -302,7 +305,7 @@ function CellView({ extSolute }: CellViewProps) {
       {/* Normal-size reference ring */}
       <circle cx={CELL_CX} cy={CELL_CY} r={NORMAL_R}
         fill="none" stroke="#94a3b8" strokeWidth={1} strokeDasharray="4 4" opacity={0.25} />
-      <text x={CELL_CX + NORMAL_R + 5} y={CELL_CY - 3} fontSize={10} fill="#94a3b8"
+      <text x={CELL_CX + NORMAL_R + 6} y={CELL_CY - 3} fontSize={14} fill="#94a3b8"
         fontFamily="system-ui, sans-serif">normal</text>
 
       {/* Cell membrane — spring-animated radius */}
@@ -319,16 +322,16 @@ function CellView({ extSolute }: CellViewProps) {
           <Molecule key={`IS${i}`}
             cx={CELL_CX + Math.cos(rad) * r}
             cy={CELL_CY + Math.sin(rad) * r}
-            r={6} color={C.solute} label="S" seed={i + 60} />
+            r={8} color={C.solute} label="S" seed={i + 60} />
         );
       })}
 
       {/* Tonicity badge — top-left corner, clear of the external-solute spiral */}
-      <rect x={8} y={8} width={112} height={28} rx={14}
+      <rect x={8} y={8} width={136} height={32} rx={16}
         fill={tonicityColor} fillOpacity={0.12} />
-      <rect x={8} y={8} width={112} height={28} rx={14}
+      <rect x={8} y={8} width={136} height={32} rx={16}
         stroke={tonicityColor} strokeWidth={1.5} fill="none" />
-      <text x={64} y={26} textAnchor="middle" fontSize={13} fontWeight={800}
+      <text x={76} y={29} textAnchor="middle" fontSize={17} fontWeight={800}
         fill={tonicityColor} fontFamily="system-ui, sans-serif">
         {tonicity.toUpperCase()}
       </text>
