@@ -17,9 +17,12 @@ export const metadata: Metadata = {
   description:
     "Animated biology visualizations and virtual labs for high school and early college students.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    shortcut: "/icon-32.png",
+    apple: { url: "/icon-180.png", sizes: "180x180", type: "image/png" },
   },
   openGraph: {
     title: "Cellscape — Interactive Biology Learning",
@@ -27,6 +30,7 @@ export const metadata: Metadata = {
       "Animated biology visualizations and virtual labs for high school and early college students.",
     url: "https://cellscape.app",
     siteName: "Cellscape",
+    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "Cellscape" }],
     type: "website",
   },
   twitter: {
@@ -34,6 +38,7 @@ export const metadata: Metadata = {
     title: "Cellscape — Interactive Biology Learning",
     description:
       "Animated biology visualizations and virtual labs for high school and early college students.",
+    images: ["/icon-512.png"],
   },
 };
 
