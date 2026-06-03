@@ -102,22 +102,35 @@ export function MitochondrionGroup({
   const n = Math.round(rx / 9);
   const xs = Array.from({ length: n }, (_, i) => -rx + 8 + (i * (rx * 2 - 16)) / Math.max(n - 1, 1));
 
+  // For a crista at horizontal position x, calculate the inner ellipse wall height
+  // at that x so cristae start exactly at the membrane and never poke outside it.
+  function yWall(x: number) {
+    const t = Math.min(Math.abs(x) / rix, 0.99);
+    return riy * Math.sqrt(1 - t * t);
+  }
+
   return (
     <g transform={`translate(${cx} ${cy}) rotate(${angle})`} className={className} style={style}>
       {/* Outer membrane */}
       <ellipse rx={rx}  ry={ry}  fill={`${C.mito}18`} stroke={C.mito} strokeWidth="1.8" />
       {/* Inner membrane — creates visible intermembrane space */}
       <ellipse rx={rix} ry={riy} fill={`${C.mito}22`} stroke={C.mito} strokeWidth="1.1" opacity="0.8" />
-      {/* Lamellar cristae projecting from upper inner membrane into matrix */}
-      {xs.map((x, i) => (
-        <line key={`t${i}`} x1={x} y1={-riy} x2={x} y2={-riy * 0.08}
-          stroke={C.mito} strokeWidth="1.2" strokeLinecap="round" opacity="0.65" />
-      ))}
-      {/* Bottom cristae (alternating, shorter) */}
-      {xs.filter((_, i) => i % 2 === 0).map((x, i) => (
-        <line key={`b${i}`} x1={x} y1={riy} x2={x} y2={riy * 0.12}
-          stroke={C.mito} strokeWidth="1" strokeLinecap="round" opacity="0.45" />
-      ))}
+      {/* Lamellar cristae — each starts just inside the inner membrane wall at its
+          correct y position for that x, then projects ~55 % of the way to centre */}
+      {xs.map((x, i) => {
+        const w = yWall(x);
+        return (
+          <line key={`t${i}`} x1={x} y1={-(w - 1.5)} x2={x} y2={-(w * 0.45)}
+            stroke={C.mito} strokeWidth="1.2" strokeLinecap="round" opacity="0.65" />
+        );
+      })}
+      {xs.filter((_, i) => i % 2 === 0).map((x, i) => {
+        const w = yWall(x);
+        return (
+          <line key={`b${i}`} x1={x} y1={w - 1.5} x2={x} y2={w * 0.45}
+            stroke={C.mito} strokeWidth="1" strokeLinecap="round" opacity="0.45" />
+        );
+      })}
       {/* Mitochondrial ribosomes in matrix */}
       <circle cx={-rx * 0.35} cy={ry * 0.18} r="1.8" fill={C.mito} opacity="0.4" />
       <circle cx={rx  * 0.18} cy={ry * 0.28} r="1.6" fill={C.mito} opacity="0.35" />

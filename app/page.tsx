@@ -212,9 +212,16 @@ export default function Home() {
               style={{ animationDuration: "7s", animationDelay: "3s" }}
             />
 
-            <div className="relative p-3 lg:p-5">
+            <Link
+              href="/topics/cell-biology/organelles"
+              className="relative block p-3 lg:p-5 rounded-2xl transition-all hover:ring-2 hover:ring-emerald-400/50 hover:ring-offset-2 cursor-pointer group"
+              aria-label="Explore cell organelles — interactive lesson"
+            >
               <CellIllustration />
-            </div>
+              <span className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900/80 px-3 py-1 text-xs font-semibold text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Explore organelles →
+              </span>
+            </Link>
 
           </motion.div>
         </div>

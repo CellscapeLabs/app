@@ -44,26 +44,68 @@ branch protection is enabled.
 - Preview URLs follow the pattern: `usecellscape-git-branch-name.vercel.app`
 - Test on the preview URL on mobile before merging to `main`
 
-## Current phase: Phase 1 — Foundation
-See roadmap below. We are scaffolding the core app before adding visualizations.
+## Current phase: Phase 2 — Interactive lessons
+Core app is scaffolded. We are now building out the full AP-Biology lesson library.
+Progress is tracked in `usecellscape_lesson_checklist.html` at the repo root — open
+it in a browser to see what's done and what's next.
 
 ## Roadmap summary
-1. **Phase 1** (weeks 1–6): Core app, routing, user auth, topic browsing, lesson flow
-2. **Phase 2** (weeks 7–14): Interactive SVG/3D visualizations, virtual lab simulations
+1. **Phase 1** (weeks 1–6): Core app, routing, user auth, topic browsing, lesson flow ✓
+2. **Phase 2** (weeks 7–14): Full AP-Bio interactive lesson library (30 lessons across 3 topics)
 3. **Phase 3** (weeks 15–20): Spaced repetition quizzes, progress tracking, streaks
 4. **Phase 4** (month 6+): Teacher accounts, freemium model, AI-powered hints
 
-## Biology topics (launch scope)
-- Cell biology (mitosis, organelles, membrane transport)
-- Genetics (DNA replication, transcription, translation, Mendelian inheritance)
-- Ecosystems (food webs, energy flow, nutrient cycles)
+## Lesson plan (AP-Bio scope) — 30 lessons
+Source of truth: `usecellscape_lesson_checklist.html`. Summary below for quick reference.
 
-## Key visualization ideas
-- Draggable, step-through mitosis animation (SVG + Framer Motion)
-- Interactive 3D cell with clickable organelles (Three.js)
-- Osmosis simulator with adjustable concentration sliders (D3 + React state)
-- DNA replication fork animation (SVG)
-- Food web builder (D3 force graph)
+### Cell biology
+| # | Lesson | Status |
+|---|--------|--------|
+| 1 | Mitosis | ✓ done |
+| 2 | Meiosis | ✓ done |
+| 3 | Organelles | ✓ done |
+| 4 | Cell membrane & transport | up next |
+| 5 | Osmosis & diffusion simulator | — |
+| 6 | Cellular respiration — ATP production | — |
+| 7 | Photosynthesis — light & dark reactions | — |
+| 8 | The cell cycle & checkpoints | — |
+| 9 | Prokaryotic vs eukaryotic cells | — |
+| 10 | Enzyme activity & inhibition | — |
+
+### Genetics
+| # | Lesson | Status |
+|---|--------|--------|
+| 1 | DNA structure — double helix explorer | up next |
+| 2 | DNA replication fork animation | — |
+| 3 | Transcription — DNA to mRNA | — |
+| 4 | Translation — mRNA to protein | — |
+| 5 | Mendelian inheritance & Punnett squares | — |
+| 6 | Mutations — types and effects | — |
+| 7 | Gene expression & regulation | — |
+| 8 | Chromosomes & karyotyping | — |
+| 9 | Genetic disorders explorer | — |
+| 10 | CRISPR — gene editing explainer | — |
+
+### Ecosystems
+| # | Lesson | Status |
+|---|--------|--------|
+| 1 | Food web builder | up next |
+| 2 | Energy flow — trophic levels | — |
+| 3 | Carbon cycle animation | — |
+| 4 | Nitrogen cycle animation | — |
+| 5 | Water cycle animation | — |
+| 6 | Population dynamics — predator/prey simulator | — |
+| 7 | Biomes of the world — interactive map | — |
+| 8 | Biodiversity & species interactions | — |
+| 9 | Human impact — deforestation & climate | — |
+| 10 | Ecological succession | — |
+
+## Lesson standards
+Every lesson must follow the pattern established by Mitosis, Meiosis, and Organelles:
+- Dedicated route under `/app/topics/[topic]/[lesson]/page.tsx`
+- Visualization component in `/components/visualizations/` with a comment block explaining the biology concept and interactions
+- Step-through or interactive animation (not static content)
+- Mobile-responsive, keyboard-accessible
 
 ## Coding conventions
 - TypeScript throughout — no `any` types

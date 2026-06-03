@@ -152,9 +152,12 @@ export default function MitosisPage() {
               <div className="flex items-center justify-between border-t border-zinc-100 pt-6">
                 <Link href="/topics/cell-biology"
                   className="rounded-full border-2 border-zinc-200 px-6 py-2.5 text-sm font-bold text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50">
-                  ← Back to Cell Biology
+                  ← Cell Biology
                 </Link>
-                <span className="text-sm text-zinc-400 italic">More lessons coming soon</span>
+                <Link href="/topics/cell-biology/meiosis"
+                  className="rounded-full bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-600">
+                  Next: Meiosis →
+                </Link>
               </div>
 
             </div>

@@ -195,7 +195,7 @@ const PS: PhaseState[] = [
 
 // ─── Interpolated cell SVG ────────────────────────────────────────────────────
 
-function InterpolatedCell({ progress }: { progress: number }) {
+function InterpolatedCell({ progress, viewBox: vb = "0 0 400 280" }: { progress: number; viewBox?: string }) {
   const clamped = Math.max(0, Math.min(progress, PS.length - 1));
   const fi = Math.min(Math.floor(clamped), PS.length - 1);
   const ci = Math.min(fi + 1, PS.length - 1);
@@ -212,8 +212,13 @@ function InterpolatedCell({ progress }: { progress: number }) {
   const sep3 = Math.min(Math.abs(s.vtop[3].cy - s.vbot[3].cy) / 60, 1);
   const together3 = 1 - sep3;
 
-  // "Chromosome" label: visible when xchroms present (prophase) OR vtop+vbot joined (metaphase)
-  const chromLabelOp = Math.max(s.xchroms[3].opacity, s.vtop[3].opacity * together3);
+  // "Chromosome" label: visible when xchroms present (prophase) OR vtop+vbot joined (metaphase).
+  // Xchroms are intentionally faint in telophase/cytokinesis (opacity 0.3–0.45) but we want the
+  // label to stay readable, so clamp the xchrom contribution to a minimum of 0.85 when non-zero.
+  const chromLabelOp = Math.max(
+    s.xchroms[3].opacity > 0.01 ? Math.max(s.xchroms[3].opacity, 0.85) : 0,
+    s.vtop[3].opacity * together3
+  );
 
   // "Sister chromatid" label: fades in as the chromatids physically pull apart
   const chromatidLabelOp = s.vtop[3].opacity * sep3;
@@ -229,7 +234,7 @@ function InterpolatedCell({ progress }: { progress: number }) {
   const centAnchorCy = s.xchroms[0].opacity > 0.05 ? s.xchroms[0].cy : s.vtop[0].cy;
 
   return (
-    <svg viewBox="0 0 400 280" className="w-full h-full" aria-label="Mitosis cell diagram">
+    <svg viewBox={vb} className="w-full h-full" aria-label="Mitosis cell diagram">
 
       {/* ── Main cell ── */}
       <ellipse cx={200} cy={140} rx={s.cellRx} ry={s.cellRy}
@@ -366,69 +371,65 @@ function InterpolatedCell({ progress }: { progress: number }) {
 
       {/* ── Labels — rendered last, sit above all other elements ── */}
 
-      {/* Chromatin (interphase) */}
+      {/* Chromatin (interphase) — right of nucleus, above centre */}
       {s.chromatinOp > 0.05 && (
         <g opacity={s.chromatinOp} fontFamily="system-ui, -apple-system, sans-serif">
-          <line x1={238} y1={131} x2={258} y2={122} stroke={C.nucleus} strokeWidth={0.8} opacity={0.45} />
-          <text x={261} y={119} fontSize={9} fontWeight="700" fill={C.nucleus}>Chromatin</text>
+          <line x1={239} y1={131} x2={259} y2={121} stroke={C.nucleus} strokeWidth={0.9} opacity={0.45} />
+          <text x={262} y={118} fontSize={11} fontWeight="700" fill={C.nucleus}>Chromatin</text>
         </g>
       )}
 
-      {/* Chromosome / 2 sister chromatids
-          Follows xchroms[3] in prophase, vtop[3] at metaphase. Fades as they separate. */}
+      {/* Chromosome / 2 sister chromatids — RIGHT side, follows rightmost chromosome */}
       {chromLabelOp > 0.05 && (
         <g opacity={chromLabelOp} fontFamily="system-ui, -apple-system, sans-serif">
-          <line x1={anchorCx + 8} y1={anchorCy - 6} x2={anchorCx + 20} y2={anchorCy - 18}
-            stroke={C.chrom[3]} strokeWidth={0.8} opacity={0.45} />
-          <text x={anchorCx + 22} y={anchorCy - 21} fontSize={9} fontWeight="700" fill={C.chrom[3]}>
+          <line x1={anchorCx + 9} y1={anchorCy - 7} x2={anchorCx + 21} y2={anchorCy - 20}
+            stroke={C.chrom[3]} strokeWidth={0.9} opacity={0.45} />
+          <text x={anchorCx + 23} y={anchorCy - 23} fontSize={11} fontWeight="700" fill={C.chrom[3]}>
             Chromosome
           </text>
-          <text x={anchorCx + 22} y={anchorCy - 11} fontSize={7.5} fill={C.chrom[3]} opacity={0.75}>
+          <text x={anchorCx + 23} y={anchorCy - 11} fontSize={9} fill={C.chrom[3]} opacity={0.75}>
             2 sister chromatids
           </text>
         </g>
       )}
 
-      {/* Centromere — shown at leftmost chromosome while chromatids are joined */}
+      {/* Centromere — LEFT side at chromosome height, clear of spindle lines below */}
       {centromereOp > 0.05 && (
         <g opacity={centromereOp} fontFamily="system-ui, -apple-system, sans-serif">
-          <line x1={centAnchorCx} y1={centAnchorCy + 3}
-                x2={centAnchorCx - 4} y2={centAnchorCy + 20}
-            stroke={C.plate} strokeWidth={0.8} opacity={0.5} />
-          <text x={centAnchorCx - 36} y={centAnchorCy + 30}
-            fontSize={8} fontWeight="600" fill={C.plate}>Centromere</text>
+          <line x1={72} y1={centAnchorCy} x2={centAnchorCx - 4} y2={centAnchorCy}
+            stroke={C.plate} strokeWidth={0.9} opacity={0.5} />
+          <text x={8} y={centAnchorCy + 4} fontSize={10} fontWeight="600" fill={C.plate}>
+            Centromere
+          </text>
         </g>
       )}
 
-      {/* Spindle fiber — labelled on the LEFT side (vtop[0] spindle) so it never
-           overlaps the Sister chromatid label which follows vtop[3] on the right. */}
+      {/* Spindle fiber — LEFT side (vtop[0] spindle), clear of Sister chromatid on right */}
       {s.spindleOp > 0.12 && s.vtop[0].opacity > 0.01 && (() => {
-        // Midpoint of the spindle from top centrosome to vtop[0]
         const mx = lerp(200, s.vtop[0].cx, 0.5);
         const my = lerp(s.centroTopY, s.vtop[0].cy, 0.5);
-        // Text sits left of the midpoint
-        const tx = 10;
-        const ty = my - 4;
+        const ty = my - 5;
         return (
           <g opacity={Math.min(s.spindleOp * 1.5, 0.88)} fontFamily="system-ui, -apple-system, sans-serif">
-            <line x1={tx + 62} y1={ty + 2} x2={mx} y2={my}
-              stroke={C.spindle} strokeWidth={0.8} opacity={0.55} />
-            <text x={tx} y={ty} fontSize={9} fontWeight="700" fill={C.spindle}>Spindle fiber</text>
+            <line x1={84} y1={ty + 3} x2={mx} y2={my}
+              stroke={C.spindle} strokeWidth={0.9} opacity={0.55} />
+            <text x={8} y={ty} fontSize={11} fontWeight="700" fill={C.spindle}>Spindle fiber</text>
           </g>
         );
       })()}
 
-      {/* Sister chromatid → now its own chromosome.
-          Fades in as the chromatids physically pull apart — replaces the Chromosome label. */}
+      {/* Sister chromatid / now a chromosome — RIGHT side, follows rightmost top chromatid */}
       {chromatidLabelOp > 0.05 && (
         <g opacity={chromatidLabelOp} fontFamily="system-ui, -apple-system, sans-serif">
-          <line x1={s.vtop[3].cx + 9} y1={s.vtop[3].cy - 8}
-                x2={s.vtop[3].cx + 20} y2={s.vtop[3].cy - 20}
-            stroke={C.chrom[3]} strokeWidth={0.8} opacity={0.45} />
-          <text x={s.vtop[3].cx + 22} y={s.vtop[3].cy - 23}
-            fontSize={9} fontWeight="700" fill={C.chrom[3]}>Sister chromatid</text>
-          <text x={s.vtop[3].cx + 22} y={s.vtop[3].cy - 13}
-            fontSize={7.5} fill={C.chrom[3]} opacity={0.75}>(now its own chromosome)</text>
+          <line x1={s.vtop[3].cx + 10} y1={s.vtop[3].cy - 9}
+                x2={s.vtop[3].cx + 22} y2={s.vtop[3].cy - 22}
+            stroke={C.chrom[3]} strokeWidth={0.9} opacity={0.45} />
+          <text x={s.vtop[3].cx + 24} y={s.vtop[3].cy - 25}
+            fontSize={11} fontWeight="700" fill={C.chrom[3]}>Sister chromatid</text>
+          <text x={s.vtop[3].cx + 24} y={s.vtop[3].cy - 13}
+            fontSize={9} fill={C.chrom[3]} opacity={0.75}>
+            <tspan>now a </tspan><tspan fontWeight="900" fontSize={12}>chromosome</tspan>
+          </text>
         </g>
       )}
 
@@ -726,7 +727,7 @@ export function MitosisAnimation() {
 export function MitosisEmblem({ className }: { className?: string }) {
   return (
     <div className={className ?? "w-full h-full"}>
-      <InterpolatedCell progress={4} />
+      <InterpolatedCell progress={4} viewBox="80 20 240 240" />
     </div>
   );
 }

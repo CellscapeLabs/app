@@ -29,39 +29,69 @@ const C = {
 };
 
 // ─── Crossing over ────────────────────────────────────────────────────────────
-// Each chromosome has a top segment and a bottom segment that may be swapped
-// between homologs after crossing over. 'mat' = maternal (violet), 'pat' = paternal (amber).
+// 6 segments per chromosome: [distal-top, mid-top, proximal-top,
+//                              proximal-bot, mid-bot, distal-bot].
+//
+// Conservation rule: every crossover event involves exactly two non-sister chromatids.
+// The two participants exchange segments and become exact complements of each other.
+//   A_mat  ↔  A_pat   (crossover event 1 — different position from event 2)
+//   A_mat2 ↔  A_pat2  (crossover event 2 — independent position)
+// This means cells 1 & 3 are complements; cells 2 & 4 are complements.
+// Cells 1 & 2 differ because events 1 & 2 hit different segment boundaries.
 
 type SegColor = 'mat' | 'pat';
+type Seg6 = [SegColor, SegColor, SegColor, SegColor, SegColor, SegColor];
+
 interface CrossoverPattern {
-  A_mat: [SegColor, SegColor]; // [top, bottom] of the maternal pair-A chromosome
-  A_pat: [SegColor, SegColor]; // complement — must be the mirror of A_mat
-  B_mat: [SegColor, SegColor];
-  B_pat: [SegColor, SegColor];
+  // Primary chromatids (shown in Prophase I / Metaphase I bivalent + Anaphase I)
+  A_mat: Seg6; A_pat: Seg6;
+  B_mat: Seg6; B_pat: Seg6;
+  // Sister-chromatid variants — independent crossover event, different segment boundary.
+  // Revealed when sister chromatids separate in Meiosis II (→ cells 2 & 4).
+  A_mat2: Seg6; A_pat2: Seg6;
+  B_mat2: Seg6; B_pat2: Seg6;
 }
 
-// Default: each pair has had one segment swapped, so no chromosome is purely maternal or paternal
 const DEFAULT_CROSSOVER: CrossoverPattern = {
-  A_mat: ['mat', 'pat'], A_pat: ['pat', 'mat'],
-  B_mat: ['pat', 'mat'], B_pat: ['mat', 'pat'],
+  A_mat:  ['mat','mat','mat','pat','mat','mat'],
+  A_pat:  ['pat','pat','pat','mat','pat','pat'],  // exact complement of A_mat
+  A_mat2: ['mat','mat','pat','pat','mat','mat'],
+  A_pat2: ['pat','pat','mat','mat','pat','pat'],  // exact complement of A_mat2
+  B_mat:  ['mat','pat','mat','mat','pat','mat'],
+  B_pat:  ['pat','mat','pat','pat','mat','pat'],  // exact complement of B_mat
+  B_mat2: ['mat','mat','mat','pat','pat','mat'],
+  B_pat2: ['pat','pat','pat','mat','mat','pat'],  // exact complement of B_mat2
 };
 
 function randomCrossoverPattern(): CrossoverPattern {
-  const aT = Math.random() > 0.5, aB = Math.random() > 0.5;
-  const bT = Math.random() > 0.5, bB = Math.random() > 0.5;
+  function genChrom(base: SegColor): Seg6 {
+    let c: SegColor = base;
+    const s: SegColor[] = [];
+    for (let i = 0; i < 6; i++) {
+      s.push(c);
+      // ~40 % chance of a crossover at each boundary — produces 0–3 crossovers on average
+      if (i < 5 && Math.random() > 0.6) c = c === 'mat' ? 'pat' : 'mat';
+    }
+    return s as Seg6;
+  }
+  const flip = (p: Seg6): Seg6 =>
+    p.map(s => s === 'mat' ? 'pat' : 'mat') as Seg6;
+
+  const am = genChrom('mat'), am2 = genChrom('mat');
+  const bm = genChrom('mat'), bm2 = genChrom('mat');
   return {
-    A_mat: [aT ? 'pat' : 'mat', aB ? 'pat' : 'mat'],
-    A_pat: [aT ? 'mat' : 'pat', aB ? 'mat' : 'pat'],
-    B_mat: [bT ? 'pat' : 'mat', bB ? 'pat' : 'mat'],
-    B_pat: [bT ? 'mat' : 'pat', bB ? 'mat' : 'pat'],
+    A_mat: am,  A_pat: flip(am),
+    A_mat2: am2, A_pat2: flip(am2),
+    B_mat: bm,  B_pat: flip(bm),
+    B_mat2: bm2, B_pat2: flip(bm2),
   };
 }
 
-// Resolve segment color to actual hex
+// Resolve a segment token to its actual hex color
 function sc(s: SegColor): string { return s === 'mat' ? C.homA_mat : C.homA_pat; }
-// Shortcut: get [topHex, botHex] for a named chromosome key
-function cc(k: keyof CrossoverPattern, co: CrossoverPattern): [string, string] {
-  return [sc(co[k][0]), sc(co[k][1])];
+// Get all 6 hex colors for a named chromosome
+function cc(k: keyof CrossoverPattern, co: CrossoverPattern): [string,string,string,string,string,string] {
+  return co[k].map(sc) as [string,string,string,string,string,string];
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -460,43 +490,77 @@ const PS: PhaseState[] = [
 
 // ─── Interpolated cell SVG ────────────────────────────────────────────────────
 
-// Chromosome X-shape with two-tone segments showing crossed-over DNA.
-// top = color of top arm + top-left crossbar; bot = color of bottom arm + bottom-right crossbar.
-function XChrom({ ch, top, bot }: { ch: Chrom; top: string; bot: string }) {
+// Chromosome X-shape with 6-segment coloring showing crossed-over DNA.
+// Segments run from distal tip to centromere: s0(tip-top), s1(mid-top), s2(proximal-top),
+//   s3(proximal-bot), s4(mid-bot), s5(tip-bot). Each diagonal arm mirrors the vertical arm
+//   on the same side so colour bands are consistent across both arms of each pole.
+function XChrom({ ch, s0, s1, s2, s3, s4, s5 }: {
+  ch: Chrom; s0: string; s1: string; s2: string; s3: string; s4: string; s5: string;
+}) {
   if (ch.opacity < 0.01) return null;
+  const h = ch.size;
   return (
     <g transform={`translate(${ch.cx},${ch.cy}) rotate(${ch.angle})`} opacity={ch.opacity}>
-      <line x1={0} y1={-ch.size} x2={0} y2={0}           stroke={top} strokeWidth={4.5} strokeLinecap="round" />
-      <line x1={0} y1={0}        x2={0} y2={ch.size}      stroke={bot} strokeWidth={4.5} strokeLinecap="round" />
-      <line x1={-ch.size*0.7} y1={-ch.size*0.3} x2={0} y2={0} stroke={top} strokeWidth={4.5} strokeLinecap="round" />
-      <line x1={0} y1={0} x2={ch.size*0.7} y2={ch.size*0.3}   stroke={bot} strokeWidth={4.5} strokeLinecap="round" />
-      {ch.size > 6 && <circle r={2.5} fill="white" opacity={0.6} />}
+      {/* Top vertical — tip→centromere: s0, s1, s2 */}
+      <line x1={0} y1={-h}       x2={0} y2={-h*0.667}  stroke={s0} strokeWidth={4.5} strokeLinecap="round" />
+      <line x1={0} y1={-h*0.667} x2={0} y2={-h*0.333}  stroke={s1} strokeWidth={4.5} strokeLinecap="round" />
+      <line x1={0} y1={-h*0.333} x2={0} y2={0}          stroke={s2} strokeWidth={4.5} strokeLinecap="round" />
+      {/* Bottom vertical — centromere→tip: s3, s4, s5 */}
+      <line x1={0} y1={0}        x2={0} y2={h*0.333}    stroke={s3} strokeWidth={4.5} strokeLinecap="round" />
+      <line x1={0} y1={h*0.333}  x2={0} y2={h*0.667}    stroke={s4} strokeWidth={4.5} strokeLinecap="round" />
+      <line x1={0} y1={h*0.667}  x2={0} y2={h}          stroke={s5} strokeWidth={4.5} strokeLinecap="round" />
+      {/* Left diagonal — outer→centromere: s0, s1, s2 */}
+      <line x1={-h*0.7}   y1={-h*0.3}   x2={-h*0.467} y2={-h*0.2}   stroke={s0} strokeWidth={4.5} strokeLinecap="round" />
+      <line x1={-h*0.467} y1={-h*0.2}   x2={-h*0.233} y2={-h*0.1}   stroke={s1} strokeWidth={4.5} strokeLinecap="round" />
+      <line x1={-h*0.233} y1={-h*0.1}   x2={0}         y2={0}         stroke={s2} strokeWidth={4.5} strokeLinecap="round" />
+      {/* Right diagonal — centromere→outer: s3, s4, s5 */}
+      <line x1={0}        y1={0}         x2={h*0.233}  y2={h*0.1}    stroke={s3} strokeWidth={4.5} strokeLinecap="round" />
+      <line x1={h*0.233}  y1={h*0.1}    x2={h*0.467}  y2={h*0.2}    stroke={s4} strokeWidth={4.5} strokeLinecap="round" />
+      <line x1={h*0.467}  y1={h*0.2}    x2={h*0.7}    y2={h*0.3}    stroke={s5} strokeWidth={4.5} strokeLinecap="round" />
+      {h > 6 && <circle r={2.5} fill="white" opacity={0.6} />}
     </g>
   );
 }
 
-// V-chromatid going toward top pole — left arm = top segment color, right arm = bot segment color
-function VUp({ v, top, bot }: { v: VChrom; top: string; bot: string }) {
+// V-chromatid going toward top pole — left arm: s0(tip), s1(mid), s2(inner→centromere)
+//   right arm: s3(inner), s4(mid), s5(tip). Matches XChrom segment ordering.
+function VUp({ v, s0, s1, s2, s3, s4, s5 }: {
+  v: VChrom; s0: string; s1: string; s2: string; s3: string; s4: string; s5: string;
+}) {
   if (v.opacity < 0.01) return null;
   return (
     <g opacity={v.opacity}>
-      <line x1={v.cx} y1={v.cy} x2={v.cx-7} y2={v.cy-10} stroke={top} strokeWidth={4} strokeLinecap="round" />
-      <line x1={v.cx} y1={v.cy} x2={v.cx+7} y2={v.cy-10} stroke={bot} strokeWidth={4} strokeLinecap="round" />
+      {/* Left arm — tip s0 → mid s1 → centromere s2 */}
+      <line x1={v.cx-4.67} y1={v.cy-6.67} x2={v.cx-7}    y2={v.cy-10}   stroke={s0} strokeWidth={4} strokeLinecap="round" />
+      <line x1={v.cx-2.33} y1={v.cy-3.33} x2={v.cx-4.67} y2={v.cy-6.67} stroke={s1} strokeWidth={4} strokeLinecap="round" />
+      <line x1={v.cx}      y1={v.cy}       x2={v.cx-2.33} y2={v.cy-3.33} stroke={s2} strokeWidth={4} strokeLinecap="round" />
+      {/* Right arm — centromere s3 → mid s4 → tip s5 */}
+      <line x1={v.cx}      y1={v.cy}       x2={v.cx+2.33} y2={v.cy-3.33} stroke={s3} strokeWidth={4} strokeLinecap="round" />
+      <line x1={v.cx+2.33} y1={v.cy-3.33} x2={v.cx+4.67} y2={v.cy-6.67} stroke={s4} strokeWidth={4} strokeLinecap="round" />
+      <line x1={v.cx+4.67} y1={v.cy-6.67} x2={v.cx+7}    y2={v.cy-10}   stroke={s5} strokeWidth={4} strokeLinecap="round" />
     </g>
   );
 }
 
-function VDown({ v, top, bot }: { v: VChrom; top: string; bot: string }) {
+function VDown({ v, s0, s1, s2, s3, s4, s5 }: {
+  v: VChrom; s0: string; s1: string; s2: string; s3: string; s4: string; s5: string;
+}) {
   if (v.opacity < 0.01) return null;
   return (
     <g opacity={v.opacity}>
-      <line x1={v.cx} y1={v.cy} x2={v.cx-7} y2={v.cy+10} stroke={top} strokeWidth={4} strokeLinecap="round" />
-      <line x1={v.cx} y1={v.cy} x2={v.cx+7} y2={v.cy+10} stroke={bot} strokeWidth={4} strokeLinecap="round" />
+      {/* Left arm — tip s0 → mid s1 → centromere s2 */}
+      <line x1={v.cx-4.67} y1={v.cy+6.67} x2={v.cx-7}    y2={v.cy+10}   stroke={s0} strokeWidth={4} strokeLinecap="round" />
+      <line x1={v.cx-2.33} y1={v.cy+3.33} x2={v.cx-4.67} y2={v.cy+6.67} stroke={s1} strokeWidth={4} strokeLinecap="round" />
+      <line x1={v.cx}      y1={v.cy}       x2={v.cx-2.33} y2={v.cy+3.33} stroke={s2} strokeWidth={4} strokeLinecap="round" />
+      {/* Right arm — centromere s3 → mid s4 → tip s5 */}
+      <line x1={v.cx}      y1={v.cy}       x2={v.cx+2.33} y2={v.cy+3.33} stroke={s3} strokeWidth={4} strokeLinecap="round" />
+      <line x1={v.cx+2.33} y1={v.cy+3.33} x2={v.cx+4.67} y2={v.cy+6.67} stroke={s4} strokeWidth={4} strokeLinecap="round" />
+      <line x1={v.cx+4.67} y1={v.cy+6.67} x2={v.cx+7}    y2={v.cy+10}   stroke={s5} strokeWidth={4} strokeLinecap="round" />
     </g>
   );
 }
 
-function InterpolatedCell({ progress, crossover }: { progress: number; crossover: CrossoverPattern }) {
+function InterpolatedCell({ progress, crossover, viewBox: vb = "0 0 400 280" }: { progress: number; crossover: CrossoverPattern; viewBox?: string }) {
   const clamped = Math.max(0, Math.min(progress, PS.length - 1));
   const fi = Math.min(Math.floor(clamped), PS.length - 1);
   const ci = Math.min(fi + 1, PS.length - 1);
@@ -514,7 +578,7 @@ function InterpolatedCell({ progress, crossover }: { progress: number; crossover
   const showHaploidLabel  = s.cells4[0].rx > 10;
 
   return (
-    <svg viewBox="0 0 400 280" className="w-full h-full" aria-label="Meiosis cell diagram">
+    <svg viewBox={vb} className="w-full h-full" aria-label="Meiosis cell diagram">
 
       {/* ── Main cell (Meiosis I) ── */}
       {s.cellOp > 0.01 && (
@@ -621,8 +685,8 @@ function InterpolatedCell({ progress, crossover }: { progress: number; crossover
       {/* ── Bivalent chromosomes (Prophase I / Metaphase I) — each shown with crossed-over segments ── */}
       {s.bivalents.map((ch, i) => {
         const keys: (keyof CrossoverPattern)[] = ['A_mat','A_pat','B_mat','B_pat'];
-        const [t,b] = cc(keys[i], crossover);
-        return <XChrom key={`biv${i}`} ch={ch} top={t} bot={b} />;
+        const [s0,s1,s2,s3,s4,s5] = cc(keys[i], crossover);
+        return <XChrom key={`biv${i}`} ch={ch} s0={s0} s1={s1} s2={s2} s3={s3} s4={s4} s5={s5} />;
       })}
 
       {/* ── Chiasma markers (crossing over) ── */}
@@ -650,13 +714,13 @@ function InterpolatedCell({ progress, crossover }: { progress: number; crossover
       {/* ── Separated homologs (Anaphase I / Telophase I) — segment colors persist after crossing over ── */}
       {s.sepTop.map((ch, i) => {
         const k: keyof CrossoverPattern = i === 0 ? 'A_mat' : 'B_pat';
-        const [t,b] = cc(k, crossover);
-        return <XChrom key={`st${i}`} ch={ch} top={t} bot={b} />;
+        const [s0,s1,s2,s3,s4,s5] = cc(k, crossover);
+        return <XChrom key={`st${i}`} ch={ch} s0={s0} s1={s1} s2={s2} s3={s3} s4={s4} s5={s5} />;
       })}
       {s.sepBot.map((ch, i) => {
         const k: keyof CrossoverPattern = i === 0 ? 'A_pat' : 'B_mat';
-        const [t,b] = cc(k, crossover);
-        return <XChrom key={`sb${i}`} ch={ch} top={t} bot={b} />;
+        const [s0,s1,s2,s3,s4,s5] = cc(k, crossover);
+        return <XChrom key={`sb${i}`} ch={ch} s0={s0} s1={s1} s2={s2} s3={s3} s4={s4} s5={s5} />;
       })}
 
       {/* ── Reform nuclei (Telophase I) ── */}
@@ -671,11 +735,12 @@ function InterpolatedCell({ progress, crossover }: { progress: number; crossover
           strokeDasharray="5 3" opacity={s.nucBotI.opacity} />
       )}
 
-      {/* ── Meiosis II: V-chromatids — left arm = top segment, right arm = bottom segment ── */}
-      {s.vtop2.map((v, i)  => { const [t,b]=cc(i===0?'A_mat':'B_pat',crossover); return <VUp   key={`vt2_${i}`}  v={v} top={t} bot={b} />; })}
-      {s.vbot2.map((v, i)  => { const [t,b]=cc(i===0?'A_mat':'B_pat',crossover); return <VDown key={`vb2_${i}`}  v={v} top={t} bot={b} />; })}
-      {s.vtop2b.map((v, i) => { const [t,b]=cc(i===0?'A_pat':'B_mat',crossover); return <VUp   key={`vt2b_${i}`} v={v} top={t} bot={b} />; })}
-      {s.vbot2b.map((v, i) => { const [t,b]=cc(i===0?'A_pat':'B_mat',crossover); return <VDown key={`vb2b_${i}`} v={v} top={t} bot={b} />; })}
+      {/* ── Meiosis II: V-chromatids — vtop/vtop2b use primary patterns (→ cells 1 & 3),
+           vbot/vbot2b use sister-chromatid variants (→ cells 2 & 4) for 4 unique haploids ── */}
+      {s.vtop2.map((v, i)  => { const [s0,s1,s2,s3,s4,s5]=cc(i===0?'A_mat' :'B_pat', crossover); return <VUp   key={`vt2_${i}`}  v={v} s0={s0} s1={s1} s2={s2} s3={s3} s4={s4} s5={s5} />; })}
+      {s.vbot2.map((v, i)  => { const [s0,s1,s2,s3,s4,s5]=cc(i===0?'A_mat2':'B_pat2',crossover); return <VDown key={`vb2_${i}`}  v={v} s0={s0} s1={s1} s2={s2} s3={s3} s4={s4} s5={s5} />; })}
+      {s.vtop2b.map((v, i) => { const [s0,s1,s2,s3,s4,s5]=cc(i===0?'A_pat' :'B_mat', crossover); return <VUp   key={`vt2b_${i}`} v={v} s0={s0} s1={s1} s2={s2} s3={s3} s4={s4} s5={s5} />; })}
+      {s.vbot2b.map((v, i) => { const [s0,s1,s2,s3,s4,s5]=cc(i===0?'A_pat2':'B_mat2',crossover); return <VDown key={`vb2b_${i}`} v={v} s0={s0} s1={s1} s2={s2} s3={s3} s4={s4} s5={s5} />; })}
 
       {/* ── 4 haploid nuclei ── */}
       {s.nuc4.map((n, i) => n.opacity > 0.01 ? (
@@ -823,21 +888,31 @@ function InterpolatedCell({ progress, crossover }: { progress: number; crossover
 
             {/* Chromosome bars inside each cell — split to show crossed-over segments */}
             {([
-              { cx:125, cy:76,  k1:'A_mat' as const, k2:'B_pat' as const },
-              { cx:275, cy:76,  k1:'A_mat' as const, k2:'B_pat' as const },
-              { cx:125, cy:204, k1:'A_pat' as const, k2:'B_mat' as const },
-              { cx:275, cy:204, k1:'A_pat' as const, k2:'B_mat' as const },
+              { cx:125, cy:76,  k1:'A_mat'  as const, k2:'B_pat'  as const },
+              { cx:275, cy:76,  k1:'A_mat2' as const, k2:'B_pat2' as const },
+              { cx:125, cy:204, k1:'A_pat'  as const, k2:'B_mat'  as const },
+              { cx:275, cy:204, k1:'A_pat2' as const, k2:'B_mat2' as const },
             ]).map(({ cx, cy, k1, k2 }, i) => {
-              const [t1,b1] = cc(k1, crossover);
-              const [t2,b2] = cc(k2, crossover);
+              const [a0,a1,a2,a3,a4,a5] = cc(k1, crossover);
+              const [b0,b1,b2,b3,b4,b5] = cc(k2, crossover);
+              // Bar spans cy-9 to cy+9 (18px), giving ~3px per segment — legible at strokeWidth 4
+              const y = (n: number) => cy - 9 + n * 3;
               return (
                 <g key={`cm_${i}`} opacity={0.9}>
-                  {/* Bar 1 (chromosome from pair A): top half / bottom half */}
-                  <line x1={cx-5} y1={cy-7} x2={cx-5} y2={cy} stroke={t1} strokeWidth={4} strokeLinecap="round" />
-                  <line x1={cx-5} y1={cy}   x2={cx-5} y2={cy+7} stroke={b1} strokeWidth={4} strokeLinecap="round" />
-                  {/* Bar 2 (chromosome from pair B): top half / bottom half */}
-                  <line x1={cx+6} y1={cy-7} x2={cx+6} y2={cy} stroke={t2} strokeWidth={4} strokeLinecap="round" />
-                  <line x1={cx+6} y1={cy}   x2={cx+6} y2={cy+7} stroke={b2} strokeWidth={4} strokeLinecap="round" />
+                  {/* Bar 1 (chromosome from pair A): 6 segments top→bottom */}
+                  <line x1={cx-5} y1={y(0)} x2={cx-5} y2={y(1)} stroke={a0} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx-5} y1={y(1)} x2={cx-5} y2={y(2)} stroke={a1} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx-5} y1={y(2)} x2={cx-5} y2={y(3)} stroke={a2} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx-5} y1={y(3)} x2={cx-5} y2={y(4)} stroke={a3} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx-5} y1={y(4)} x2={cx-5} y2={y(5)} stroke={a4} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx-5} y1={y(5)} x2={cx-5} y2={y(6)} stroke={a5} strokeWidth={4} strokeLinecap="round" />
+                  {/* Bar 2 (chromosome from pair B): 6 segments top→bottom */}
+                  <line x1={cx+6} y1={y(0)} x2={cx+6} y2={y(1)} stroke={b0} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx+6} y1={y(1)} x2={cx+6} y2={y(2)} stroke={b1} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx+6} y1={y(2)} x2={cx+6} y2={y(3)} stroke={b2} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx+6} y1={y(3)} x2={cx+6} y2={y(4)} stroke={b3} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx+6} y1={y(4)} x2={cx+6} y2={y(5)} stroke={b4} strokeWidth={4} strokeLinecap="round" />
+                  <line x1={cx+6} y1={y(5)} x2={cx+6} y2={y(6)} stroke={b5} strokeWidth={4} strokeLinecap="round" />
                 </g>
               );
             })}
@@ -1085,10 +1160,13 @@ export function MeiosisViewer() {
             onClick={randomizeCrossover}
             className="flex items-center gap-1.5 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm transition-all hover:bg-violet-50 hover:border-violet-300 active:scale-95"
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path d="M8 1h3v3M4 11H1V8M11 1L6.5 5.5M1 11l4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <rect x="1" y="1" width="12" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="4.5" cy="4.5" r="1.2" fill="currentColor" />
+              <circle cx="7"   cy="7"   r="1.2" fill="currentColor" />
+              <circle cx="9.5" cy="9.5" r="1.2" fill="currentColor" />
             </svg>
-            Shuffle crossing over
+            Randomise crossing over
           </button>
         </div>
 
@@ -1210,7 +1288,7 @@ export function MeiosisAnimation() {
 export function MeiosisEmblem({ className }: { className?: string }) {
   return (
     <div className={className ?? "w-full h-full"}>
-      <InterpolatedCell progress={3} crossover={DEFAULT_CROSSOVER} />
+      <InterpolatedCell progress={3} crossover={DEFAULT_CROSSOVER} viewBox="80 20 240 240" />
     </div>
   );
 }

@@ -32,6 +32,24 @@ export const TOPICS: Topic[] = [
         slug: "meiosis",
         durationMinutes: 16,
       },
+      {
+        id: "organelles",
+        title: "Organelles",
+        slug: "organelles",
+        durationMinutes: 14,
+      },
+      {
+        id: "cell-membrane",
+        title: "Cell Membrane & Transport",
+        slug: "cell-membrane",
+        durationMinutes: 14,
+      },
+      {
+        id: "osmosis",
+        title: "Osmosis & Diffusion",
+        slug: "osmosis",
+        durationMinutes: 15,
+      },
     ],
   },
   {

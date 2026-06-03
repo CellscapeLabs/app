@@ -1,0 +1,151 @@
+
+<style>
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+  .topic { margin-bottom: 2rem; }
+  .topic-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; padding-bottom: 10px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .topic-badge { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: var(--border-radius-md); }
+  .topic-title { font-size: 17px; font-weight: 500; color: var(--color-text-primary); margin: 0; }
+  .lesson-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; }
+  .lesson-row:last-child { border-bottom: none; }
+  .checkbox { width: 18px; height: 18px; border-radius: 4px; border: 0.5px solid var(--color-border-secondary); flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+  .checkbox.done { background: #1D9E75; border-color: #1D9E75; }
+  .checkbox.done::after { content: ''; display: block; width: 5px; height: 9px; border: 2px solid #fff; border-top: none; border-left: none; transform: rotate(45deg) translate(-1px, -1px); }
+  .lesson-text { font-size: 14px; color: var(--color-text-primary); line-height: 1.5; }
+  .lesson-text.done { color: var(--color-text-tertiary); text-decoration: line-through; }
+  .lesson-tag { font-size: 11px; padding: 2px 7px; border-radius: var(--border-radius-md); margin-left: 6px; font-weight: 500; display: inline-block; vertical-align: middle; }
+  .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
+  .progress-bar-bg { flex: 1; height: 4px; background: var(--color-border-tertiary); border-radius: 2px; }
+  .progress-bar-fill { height: 4px; border-radius: 2px; background: #1D9E75; transition: width 0.3s; }
+  .progress-label { font-size: 13px; color: var(--color-text-secondary); min-width: 60px; text-align: right; }
+</style>
+
+<h2 class="sr-only">Interactive lesson checklist for useCellscape covering cell biology, genetics, and ecosystems topics</h2>
+
+<div style="padding: 1rem 0;">
+
+  <div class="progress-row">
+    <span style="font-size:13px; color:var(--color-text-secondary);">Overall progress</span>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="global-bar" style="width:0%"></div></div>
+    <span class="progress-label" id="global-label">0 / 0</span>
+  </div>
+
+  <div class="topic" id="topic-cell">
+    <div class="topic-header">
+      <span class="topic-badge" style="background:#E1F5EE; color:#085041;">Cell biology</span>
+      <span class="progress-label" id="prog-cell" style="margin-left:auto; font-size:12px;"></span>
+    </div>
+    <div id="list-cell"></div>
+  </div>
+
+  <div class="topic" id="topic-genetics">
+    <div class="topic-header">
+      <span class="topic-badge" style="background:#EEEDFE; color:#26215C;">Genetics</span>
+      <span class="progress-label" id="prog-genetics" style="margin-left:auto; font-size:12px;"></span>
+    </div>
+    <div id="list-genetics"></div>
+  </div>
+
+  <div class="topic" id="topic-ecosystems">
+    <div class="topic-header">
+      <span class="topic-badge" style="background:#FAEEDA; color:#412402;">Ecosystems</span>
+      <span class="progress-label" id="prog-ecosystems" style="margin-left:auto; font-size:12px;"></span>
+    </div>
+    <div id="list-ecosystems"></div>
+  </div>
+
+</div>
+
+<script>
+const lessons = {
+  cell: [
+    { id:'cell-1',  text:'Mitosis', done: true },
+    { id:'cell-2',  text:'Meiosis', done: true },
+    { id:'cell-3',  text:'Organelles', done: true },
+    { id:'cell-4',  text:'Cell membrane & transport', tag:'next' },
+    { id:'cell-5',  text:'Osmosis & diffusion simulator' },
+    { id:'cell-6',  text:'Cellular respiration — ATP production' },
+    { id:'cell-7',  text:'Photosynthesis — light & dark reactions' },
+    { id:'cell-8',  text:'The cell cycle & checkpoints' },
+    { id:'cell-9',  text:'Prokaryotic vs eukaryotic cells' },
+    { id:'cell-10', text:'Enzyme activity & inhibition' },
+  ],
+  genetics: [
+    { id:'gen-1', text:'DNA structure — double helix explorer', tag:'next' },
+    { id:'gen-2', text:'DNA replication fork animation' },
+    { id:'gen-3', text:'Transcription — DNA to mRNA' },
+    { id:'gen-4', text:'Translation — mRNA to protein' },
+    { id:'gen-5', text:'Mendelian inheritance & Punnett squares' },
+    { id:'gen-6', text:'Mutations — types and effects' },
+    { id:'gen-7', text:'Gene expression & regulation' },
+    { id:'gen-8', text:'Chromosomes & karyotyping' },
+    { id:'gen-9', text:'Genetic disorders explorer' },
+    { id:'gen-10', text:'CRISPR — gene editing explainer' },
+  ],
+  ecosystems: [
+    { id:'eco-1', text:'Food web builder', tag:'next' },
+    { id:'eco-2', text:'Energy flow — trophic levels' },
+    { id:'eco-3', text:'Carbon cycle animation' },
+    { id:'eco-4', text:'Nitrogen cycle animation' },
+    { id:'eco-5', text:'Water cycle animation' },
+    { id:'eco-6', text:'Population dynamics — predator/prey simulator' },
+    { id:'eco-7', text:'Biomes of the world — interactive map' },
+    { id:'eco-8', text:'Biodiversity & species interactions' },
+    { id:'eco-9', text:'Human impact — deforestation & climate' },
+    { id:'eco-10', text:'Ecological succession' },
+  ]
+};
+
+const tagColors = {
+  next: { bg:'#E6F1FB', color:'#0C447C', label:'up next' }
+};
+
+const state = {};
+Object.keys(lessons).forEach(topic => {
+  lessons[topic].forEach(l => { state[l.id] = l.done || false; });
+});
+
+function renderList(topic) {
+  const container = document.getElementById('list-' + topic);
+  container.innerHTML = '';
+  lessons[topic].forEach(l => {
+    const row = document.createElement('div');
+    row.className = 'lesson-row';
+    row.setAttribute('role', 'checkbox');
+    row.setAttribute('aria-checked', state[l.id]);
+    row.setAttribute('tabindex', '0');
+    const isDone = state[l.id];
+    let tagHtml = '';
+    if (l.tag && !isDone) {
+      const t = tagColors[l.tag];
+      tagHtml = `<span class="lesson-tag" style="background:${t.bg};color:${t.color};">${t.label}</span>`;
+    }
+    row.innerHTML = `
+      <div class="checkbox ${isDone ? 'done' : ''}" aria-hidden="true"></div>
+      <span class="lesson-text ${isDone ? 'done' : ''}">${l.text}${tagHtml}</span>
+    `;
+    const toggle = () => {
+      state[l.id] = !state[l.id];
+      renderList(topic);
+      updateProgress();
+    };
+    row.addEventListener('click', toggle);
+    row.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); } });
+    container.appendChild(row);
+  });
+}
+
+function updateProgress() {
+  let total = 0, done = 0;
+  Object.keys(lessons).forEach(topic => {
+    const t = lessons[topic].length;
+    const d = lessons[topic].filter(l => state[l.id]).length;
+    total += t; done += d;
+    document.getElementById('prog-' + topic).textContent = d + ' / ' + t;
+  });
+  document.getElementById('global-bar').style.width = Math.round(done / total * 100) + '%';
+  document.getElementById('global-label').textContent = done + ' / ' + total;
+}
+
+Object.keys(lessons).forEach(t => renderList(t));
+updateProgress();
+</script>

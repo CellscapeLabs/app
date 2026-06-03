@@ -175,11 +175,11 @@ export default function MeiosisPage() {
               <div className="flex items-center justify-between border-t border-zinc-100 pt-6">
                 <Link href="/topics/cell-biology"
                   className="rounded-full border-2 border-zinc-200 px-6 py-2.5 text-sm font-bold text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50">
-                  ← Back to Cell Biology
+                  ← Cell Biology
                 </Link>
-                <Link href="/topics/cell-biology/mitosis"
+                <Link href="/topics/cell-biology/organelles"
                   className="rounded-full bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-600">
-                  Compare: Mitosis →
+                  Next: Organelles →
                 </Link>
               </div>
 
