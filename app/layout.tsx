@@ -16,6 +16,25 @@ export const metadata: Metadata = {
   title: "Cellscape — Interactive Biology Learning",
   description:
     "Animated biology visualizations and virtual labs for high school and early college students.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
+  openGraph: {
+    title: "Cellscape — Interactive Biology Learning",
+    description:
+      "Animated biology visualizations and virtual labs for high school and early college students.",
+    url: "https://cellscape.app",
+    siteName: "Cellscape",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Cellscape — Interactive Biology Learning",
+    description:
+      "Animated biology visualizations and virtual labs for high school and early college students.",
+  },
 };
 
 export default function RootLayout({

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TOPICS } from "@/content/topics";
+import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
 
 export const metadata = { title: "Topics — Cellscape" };
 
@@ -9,9 +10,7 @@ export default function TopicsPage() {
       <nav className="sticky top-0 z-50 border-b border-zinc-100 bg-white/90 backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-xs font-black text-white shadow-md shadow-emerald-200">
-              c
-            </div>
+            <CellscapeIcon />
             <span className="font-black text-zinc-900 tracking-tight">Cellscape</span>
           </Link>
         </div>

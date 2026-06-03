@@ -7,6 +7,7 @@ import { CellIllustration } from "@/components/visualizations/CellIllustration";
 import { ExplodingTopicsSection } from "@/components/visualizations/ExplodingTopicsSection";
 import { VineDecoration } from "@/components/ui/VineDecoration";
 import { FloatingBioParticles } from "@/components/ui/FloatingBioParticles";
+import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
 
 // ─── Animation variants ───────────────────────────────────────────────────────
 
@@ -115,12 +116,10 @@ export default function Home() {
       {/* ── Navigation ── */}
       <nav className="sticky top-0 z-50 border-b border-zinc-100 bg-white/90 backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-xs font-black text-white shadow-md shadow-emerald-200">
-              uc
-            </div>
+          <Link href="/" className="flex items-center gap-2.5">
+            <CellscapeIcon />
             <span className="font-black text-zinc-900 tracking-tight">Cellscape</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-4">
             <Link href="/topics" className="hidden text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 sm:block">
               Topics
@@ -335,7 +334,10 @@ export default function Home() {
       {/* ── Footer ── */}
       <footer className="border-t border-zinc-100 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 text-sm">
-          <span className="font-black tracking-tight text-zinc-800">Cellscape</span>
+          <div className="flex items-center gap-2">
+            <CellscapeIcon className="h-6 w-6 shadow-none" />
+            <span className="font-black tracking-tight text-zinc-800">Cellscape</span>
+          </div>
           <span className="text-zinc-400">Interactive biology for everyone.</span>
         </div>
       </footer>
