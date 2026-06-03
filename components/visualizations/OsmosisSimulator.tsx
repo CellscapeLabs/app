@@ -104,11 +104,11 @@ function Membrane() {
         <g key={i}>
           <rect x={MX - 9} y={py - 9} width={18} height={18} rx={4}
             fill={C.membrane} fillOpacity={0.2} stroke={C.membrane} strokeWidth={1.5} />
-          <text x={MX} y={py + 4} textAnchor="middle" fontSize={7} fontWeight={800}
+          <text x={MX} y={py + 4} textAnchor="middle" fontSize={8} fontWeight={800}
             fill={C.membrane} fontFamily="system-ui, sans-serif">AQP</text>
         </g>
       ))}
-      <text x={MX} y={H - 6} textAnchor="middle" fontSize={9} fontWeight={600}
+      <text x={MX} y={H - 6} textAnchor="middle" fontSize={11} fontWeight={600}
         fill={C.membrane} opacity={0.7} fontFamily="system-ui, sans-serif">
         semipermeable membrane
       </text>
@@ -146,9 +146,9 @@ function ChamberView({ leftSolute, rightSolute, crossPhases }: ChamberViewProps)
       <rect x={MX} y={0} width={MX} height={H}
         fill="#fff7ed" fillOpacity={0.25 + rightSolute * 0.05} />
 
-      <text x={MX / 2}       y={14} textAnchor="middle" fontSize={9} fontWeight={700}
+      <text x={MX / 2}       y={16} textAnchor="middle" fontSize={12} fontWeight={700}
         fill="#94a3b8" fontFamily="system-ui, sans-serif" letterSpacing={0.8}>LEFT CHAMBER</text>
-      <text x={MX + MX / 2}  y={14} textAnchor="middle" fontSize={9} fontWeight={700}
+      <text x={MX + MX / 2}  y={16} textAnchor="middle" fontSize={12} fontWeight={700}
         fill="#94a3b8" fontFamily="system-ui, sans-serif" letterSpacing={0.8}>RIGHT CHAMBER</text>
 
       <Membrane />
@@ -205,17 +205,17 @@ function ChamberView({ leftSolute, rightSolute, crossPhases }: ChamberViewProps)
             stroke={C.water} strokeWidth={2.5} fill="none" markerEnd="url(#osm-arr)" />
           <text
             x={direction === "lr" ? MX + 34 : MX - 34}
-            y={H / 2 - 28}
-            textAnchor="middle" fontSize={9} fontWeight={700}
+            y={H / 2 - 30}
+            textAnchor="middle" fontSize={11} fontWeight={700}
             fill={C.water} fontFamily="system-ui, sans-serif">
             net H₂O flow
           </text>
         </g>
       ) : (
         <g>
-          <text x={MX} y={H / 2 - 20} textAnchor="middle" fontSize={11} fontWeight={700}
+          <text x={MX} y={H / 2 - 20} textAnchor="middle" fontSize={14} fontWeight={700}
             fill="#94a3b8" fontFamily="system-ui, sans-serif">⇌ Equilibrium</text>
-          <text x={MX} y={H / 2 - 6} textAnchor="middle" fontSize={9}
+          <text x={MX} y={H / 2 - 4} textAnchor="middle" fontSize={11}
             fill="#94a3b8" fontFamily="system-ui, sans-serif">no net water movement</text>
         </g>
       )}
@@ -270,7 +270,7 @@ function CellView({ extSolute }: CellViewProps) {
 
       {/* Solution background */}
       <rect x={0} y={0} width={W} height={H} fill="#eff6ff" fillOpacity={0.35} />
-      <text x={W - 10} y={16} textAnchor="end" fontSize={9} fontWeight={700}
+      <text x={W - 10} y={16} textAnchor="end" fontSize={12} fontWeight={700}
         fill="#94a3b8" fontFamily="system-ui, sans-serif" letterSpacing={0.8}>SOLUTION</text>
 
       {/* External solute */}
@@ -302,7 +302,7 @@ function CellView({ extSolute }: CellViewProps) {
       {/* Normal-size reference ring */}
       <circle cx={CELL_CX} cy={CELL_CY} r={NORMAL_R}
         fill="none" stroke="#94a3b8" strokeWidth={1} strokeDasharray="4 4" opacity={0.25} />
-      <text x={CELL_CX + NORMAL_R + 5} y={CELL_CY - 3} fontSize={8} fill="#94a3b8"
+      <text x={CELL_CX + NORMAL_R + 5} y={CELL_CY - 3} fontSize={10} fill="#94a3b8"
         fontFamily="system-ui, sans-serif">normal</text>
 
       {/* Cell membrane — spring-animated radius */}
@@ -323,12 +323,12 @@ function CellView({ extSolute }: CellViewProps) {
         );
       })}
 
-      {/* Tonicity badge */}
-      <rect x={CELL_CX - 54} y={18} width={108} height={26} rx={13}
+      {/* Tonicity badge — top-left corner, clear of the external-solute spiral */}
+      <rect x={8} y={8} width={112} height={28} rx={14}
         fill={tonicityColor} fillOpacity={0.12} />
-      <rect x={CELL_CX - 54} y={18} width={108} height={26} rx={13}
+      <rect x={8} y={8} width={112} height={28} rx={14}
         stroke={tonicityColor} strokeWidth={1.5} fill="none" />
-      <text x={CELL_CX} y={35} textAnchor="middle" fontSize={12} fontWeight={800}
+      <text x={64} y={26} textAnchor="middle" fontSize={13} fontWeight={800}
         fill={tonicityColor} fontFamily="system-ui, sans-serif">
         {tonicity.toUpperCase()}
       </text>
