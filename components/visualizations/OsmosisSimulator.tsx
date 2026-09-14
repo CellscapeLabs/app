@@ -9,7 +9,8 @@
 //   Cell tab — one slider sets external solute concentration; the cell visually swells
 //     (hypotonic), stays normal (isotonic), or shrivels (hypertonic) with spring animation.
 
-import { useState, useRef } from "react";
+import { useState, useRef, createContext, useContext } from "react";
+import type React from "react";
 import { motion, useAnimationFrame } from "framer-motion";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -216,10 +217,28 @@ function ChamberView({ leftSolute, rightSolute, crossPhases }: ChamberViewProps)
         </g>
       ) : (
         <g>
-          <text x={MX} y={H / 2 - 16} textAnchor="middle" fontSize={20} fontWeight={700}
+          <text x={MX} y={H / 2 - 38} textAnchor="middle" fontSize={18} fontWeight={700}
             fill="#94a3b8" fontFamily="system-ui, sans-serif">⇌ Equilibrium</text>
-          <text x={MX} y={H / 2 + 4} textAnchor="middle" fontSize={14}
-            fill="#94a3b8" fontFamily="system-ui, sans-serif">no net water movement</text>
+          <text x={MX} y={H / 2 - 20} textAnchor="middle" fontSize={12}
+            fill="#94a3b8" fontFamily="system-ui, sans-serif">no net movement — but water still crosses</text>
+          {/* Bidirectional crossing molecules at equilibrium */}
+          {[0, 1, 2].map((i) => {
+            const crossY = [80, 150, 220][i];
+            const phase  = crossPhases[i] ?? (i / 3);
+            // Left-to-right molecules
+            const lrX = MX + 10 + (W - 32 - MX) * phase;
+            const lrOpacity = phase < 0.12 ? phase / 0.12 : phase > 0.88 ? (1 - phase) / 0.12 : 0.55;
+            // Right-to-left molecules (offset phase by 0.5)
+            const rlPhase = (phase + 0.5) % 1;
+            const rlX = MX - 10 - (MX - 22) * rlPhase;
+            const rlOpacity = rlPhase < 0.12 ? rlPhase / 0.12 : rlPhase > 0.88 ? (1 - rlPhase) / 0.12 : 0.55;
+            return (
+              <g key={`eq${i}`}>
+                <circle cx={lrX} cy={crossY} r={6} fill={C.water} opacity={lrOpacity} />
+                <circle cx={rlX} cy={crossY} r={6} fill={C.water} opacity={rlOpacity} />
+              </g>
+            );
+          })}
         </g>
       )}
     </svg>
@@ -399,15 +418,229 @@ function CellStatus({ extSolute }: { extSolute: number }) {
   );
 }
 
+// ─── U-tube view ──────────────────────────────────────────────────────────────
+// AP Biology classic model: U-shaped tube with semipermeable membrane at the
+// bottom centre. Students set solute concentrations on each side and observe
+// which arm rises (hypertonic side gains water) and which falls.
+//
+// Geometry: the tube centreline is stroked — the outer stroke (UT_OD) produces
+// tube walls; a narrower inner stroke (UT_ID) is coloured for the fluid.
+// White air-mask rects (spring-animated height) cover the air space above each
+// water surface; everything below the mask edge is visually "water".
+// Solute dots are clipped to the live water region so they only appear in fluid.
+
+const UT_W   = 560;
+const UT_H   = 344;
+const UT_CLL = 178;                     // left arm centreline x
+const UT_CLR = 382;                     // right arm centreline x
+const UT_CX  = (UT_CLL + UT_CLR) / 2;  // 280
+const UT_BY  = 200;                     // y where straight arms meet the U-arc
+const UT_TY  = 32;                      // open top of each arm
+const UT_RAD = UT_CX - UT_CLL;         // 102 — U-bend arc radius
+const UT_OD  = 62;                      // outer tube stroke-width
+const UT_ID  = 40;                      // inner fluid channel stroke-width
+const UT_AH  = UT_BY - UT_TY;          // arm height = 168 px
+const UT_HID = UT_ID / 2;              // 20 — half inner width
+
+// Centreline path: left arm ↓ → U-arc (sweep=0 → bows downward) → right arm ↑
+const UT_PATH = `M${UT_CLL},${UT_TY} L${UT_CLL},${UT_BY} A${UT_RAD},${UT_RAD} 0 0,0 ${UT_CLR},${UT_BY} L${UT_CLR},${UT_TY}`;
+
+// Solute dot rows — dy is distance UPWARD from UT_BY; two columns per row (dx ±8)
+// 7 rows × 2 dots = 14 slots; count = round(solute × 1.4) gives 0–14 at solute 0–10
+const UT_ROWS = [14, 36, 58, 80, 102, 124, 146] as const;
+
+interface UTubeViewProps { leftSolute: number; rightSolute: number }
+
+function UTubeView({ leftSolute, rightSolute }: UTubeViewProps) {
+  const grad  = rightSolute - leftSolute;
+  const shift = Math.min(Math.abs(grad) / 10, 1) * 0.38 * Math.sign(grad);
+
+  // Water level as fraction of arm height; higher fraction → more water → lower surface y
+  const leftFrac  = Math.max(0.12, Math.min(0.92, 0.5 - shift));
+  const rightFrac = Math.max(0.12, Math.min(0.92, 0.5 + shift));
+
+  // y of each water surface (smaller y = higher water)
+  const leftWY  = UT_BY - leftFrac  * UT_AH;
+  const rightWY = UT_BY - rightFrac * UT_AH;
+
+  const rising = grad > 0.5 ? "right" : grad < -0.5 ? "left" : null;
+
+  const leftN  = Math.min(UT_ROWS.length * 2, Math.round(leftSolute  * 1.4));
+  const rightN = Math.min(UT_ROWS.length * 2, Math.round(rightSolute * 1.4));
+
+  return (
+    <svg viewBox={`0 0 ${UT_W} ${UT_H}`} className="w-full"
+      style={{ overflow: "hidden" }} role="img" aria-label="U-tube osmosis model">
+      <defs>
+        {/* Clip solute dots to the live water region in each arm */}
+        <clipPath id="ut-lwater">
+          <rect x={UT_CLL - UT_HID} width={UT_ID} y={leftWY}  height={UT_BY - leftWY}  />
+        </clipPath>
+        <clipPath id="ut-rwater">
+          <rect x={UT_CLR - UT_HID} width={UT_ID} y={rightWY} height={UT_BY - rightWY} />
+        </clipPath>
+      </defs>
+
+      {/* ── Tube walls: outer border then wall fill ── */}
+      <path d={UT_PATH} fill="none" stroke="#94a3b8" strokeWidth={UT_OD + 4} strokeLinecap="butt" />
+      <path d={UT_PATH} fill="none" stroke="#e2e8f0" strokeWidth={UT_OD}     strokeLinecap="butt" />
+
+      {/* ── Fluid channel: full water fill from top to bottom of U ── */}
+      <path d={UT_PATH} fill="none" stroke={C.water}
+        strokeWidth={UT_ID} strokeOpacity={0.40} strokeLinecap="butt" />
+
+      {/* ── White air masks (spring-animated) — cover air above each water surface ── */}
+      <motion.rect x={UT_CLL - UT_HID} width={UT_ID} y={UT_TY}
+        animate={{ height: Math.max(0, leftWY  - UT_TY) }}
+        transition={{ type: "spring", stiffness: 42, damping: 13 }}
+        fill="white" />
+      <motion.rect x={UT_CLR - UT_HID} width={UT_ID} y={UT_TY}
+        animate={{ height: Math.max(0, rightWY - UT_TY) }}
+        transition={{ type: "spring", stiffness: 42, damping: 13 }}
+        fill="white" />
+
+      {/* ── Tube border redrawn on top so it sits above the masks ── */}
+      <path d={UT_PATH} fill="none" stroke="#94a3b8"
+        strokeWidth={UT_OD + 4} strokeOpacity={0.18} strokeLinecap="butt" />
+
+      {/* ── Solute dots — clipped to water region so they only appear in fluid ──
+              Dots are placed from the bottom of each arm upward (low dy = near bottom
+              = always submerged). The clip rect tracks leftWY/rightWY so dots above
+              the water surface are invisible. */}
+      <g clipPath="url(#ut-lwater)">
+        {Array.from({ length: leftN }, (_, i) => {
+          const dy  = UT_ROWS[Math.floor(i / 2)];
+          const dx  = (i % 2 === 0 ? -1 : 1) * 8;
+          return <Molecule key={i} cx={UT_CLL + dx} cy={UT_BY - dy} r={6}
+            color={C.solute} label="S" seed={i} />;
+        })}
+      </g>
+      <g clipPath="url(#ut-rwater)">
+        {Array.from({ length: rightN }, (_, i) => {
+          const dy  = UT_ROWS[Math.floor(i / 2)];
+          const dx  = (i % 2 === 0 ? -1 : 1) * 8;
+          return <Molecule key={i} cx={UT_CLR + dx} cy={UT_BY - dy} r={6}
+            color={C.solute} label="S" seed={i + 50} />;
+        })}
+      </g>
+
+      {/* ── Semipermeable membrane — vertical at x = UT_CX through U-bend ── */}
+      <line x1={UT_CX} y1={UT_BY} x2={UT_CX} y2={UT_H}
+        stroke={C.membrane} strokeWidth={2.5} strokeDasharray="7 4" />
+      {/* Membrane label beside the line, outside the tube walls */}
+      <text x={UT_CX + UT_HID + 10} y={UT_BY + 20} fontSize={10} fontWeight={700}
+        fill={C.membrane} fontFamily="system-ui, sans-serif">membrane</text>
+
+      {/* ── Water-level arrows ── */}
+      {rising === "right" && <>
+        <text x={UT_CLL} y={UT_TY + 18} textAnchor="middle"
+          fontSize={18} fill={C.water} fontWeight={900} opacity={0.8}>↓</text>
+        <text x={UT_CLR} y={UT_TY + 18} textAnchor="middle"
+          fontSize={18} fill={C.water} fontWeight={900} opacity={0.8}>↑</text>
+      </>}
+      {rising === "left" && <>
+        <text x={UT_CLL} y={UT_TY + 18} textAnchor="middle"
+          fontSize={18} fill={C.water} fontWeight={900} opacity={0.8}>↑</text>
+        <text x={UT_CLR} y={UT_TY + 18} textAnchor="middle"
+          fontSize={18} fill={C.water} fontWeight={900} opacity={0.8}>↓</text>
+      </>}
+
+      {/* ── Arm labels ── */}
+      <text x={UT_CLL} y={UT_TY - 8} textAnchor="middle" fontSize={13} fontWeight={700}
+        fill="#94a3b8" fontFamily="system-ui, sans-serif">LEFT</text>
+      <text x={UT_CLR} y={UT_TY - 8} textAnchor="middle" fontSize={13} fontWeight={700}
+        fill="#94a3b8" fontFamily="system-ui, sans-serif">RIGHT</text>
+    </svg>
+  );
+}
+
+function UTubeStatus({ leftSolute, rightSolute }: { leftSolute: number; rightSolute: number }) {
+  const gradient = rightSolute - leftSolute;
+  let status: string;
+  if (gradient > 0.5)
+    status = `Right side is hypertonic — water crosses the membrane into the right arm, raising its level.`;
+  else if (gradient < -0.5)
+    status = `Left side is hypertonic — water crosses the membrane into the left arm, raising its level.`;
+  else
+    status = `Equal concentrations — no net osmosis, both water levels stay the same.`;
+
+  return (
+    <div className="mt-3 rounded-xl border border-zinc-100 bg-zinc-50 px-5 py-3.5">
+      <div className="mb-2 grid grid-cols-3 gap-2 text-center text-xs">
+        <div>
+          <p className="font-semibold text-zinc-400">Left solute</p>
+          <p className="text-lg font-black text-orange-500">{leftSolute}<span className="text-xs text-zinc-400">/10</span></p>
+        </div>
+        <div>
+          <p className="font-semibold text-zinc-400">Difference</p>
+          <p className={`text-lg font-black ${Math.abs(gradient) > 0 ? "text-blue-500" : "text-zinc-300"}`}>
+            {gradient > 0 ? `+${gradient}` : gradient}
+          </p>
+        </div>
+        <div>
+          <p className="font-semibold text-zinc-400">Right solute</p>
+          <p className="text-lg font-black text-orange-500">{rightSolute}<span className="text-xs text-zinc-400">/10</span></p>
+        </div>
+      </div>
+      <p className="text-center text-xs text-zinc-500">{status}</p>
+    </div>
+  );
+}
+
 // ─── OsmosisViewer (main exported component) ──────────────────────────────────
 
-type ViewTab = "chamber" | "cell";
+type ViewTab = "chamber" | "cell" | "utube";
+type InfoTab = "diffusion" | "osmosis" | "tonicity" | "utube";
+
+// Maps each viewer tab to the info-panel tab that best explains it
+const VIEWER_TO_INFO: Record<ViewTab, InfoTab> = {
+  chamber: "osmosis",
+  cell:    "tonicity",
+  utube:   "utube",
+};
+
+// ─── Shared context ───────────────────────────────────────────────────────────
+// Lets OsmosisViewer and OsmosisInfoPanel stay in sync: switching the viewer
+// tab auto-advances the info panel to the matching explanation.
+
+interface OsmosisCtxValue {
+  viewerTab:    ViewTab;
+  infoTab:      InfoTab;
+  setViewerTab: (t: ViewTab) => void;
+  setInfoTab:   (t: InfoTab) => void;
+}
+
+const OsmosisCtx = createContext<OsmosisCtxValue | null>(null);
+
+function useOsmosis(): OsmosisCtxValue {
+  const ctx = useContext(OsmosisCtx);
+  if (!ctx) throw new Error("Must be inside OsmosisProvider");
+  return ctx;
+}
+
+export function OsmosisProvider({ children }: { children: React.ReactNode }) {
+  const [viewerTab, setViewerTabState] = useState<ViewTab>("chamber");
+  const [infoTab,   setInfoTab]        = useState<InfoTab>("osmosis");
+
+  function setViewerTab(t: ViewTab) {
+    setViewerTabState(t);
+    setInfoTab(VIEWER_TO_INFO[t]);
+  }
+
+  return (
+    <OsmosisCtx.Provider value={{ viewerTab, infoTab, setViewerTab, setInfoTab }}>
+      {children}
+    </OsmosisCtx.Provider>
+  );
+}
 
 export function OsmosisViewer() {
-  const [tab,          setTab]          = useState<ViewTab>("chamber");
+  const { viewerTab: tab, setViewerTab: setTab } = useOsmosis();
   const [leftSolute,   setLeftSolute]   = useState(7);
   const [rightSolute,  setRightSolute]  = useState(3);
   const [extSolute,    setExtSolute]    = useState(8);
+  const [utLeft,       setUtLeft]       = useState(3);
+  const [utRight,      setUtRight]      = useState(7);
 
   const [crossPhases, setCrossPhases] = useState<number[]>(
     () => Array.from({ length: MAX_CROSS }, (_, i) => i / MAX_CROSS),
@@ -419,16 +652,20 @@ export function OsmosisViewer() {
   const activeN   = Math.min(Math.ceil(Math.abs(gradient) * 0.7), MAX_CROSS);
 
   useAnimationFrame((_time, delta) => {
-    if (tab !== "chamber" || direction === null || activeN === 0) return;
+    if (tab !== "chamber") return;
     if (direction !== prevDirRef.current) {
       prevDirRef.current = direction;
       setCrossPhases(Array.from({ length: MAX_CROSS }, (_, i) => i / MAX_CROSS));
       return;
     }
-    const speed = 0.00032 + Math.abs(gradient) * 0.00003;
+    const speed = direction === null
+      ? 0.00028                                              // slow constant flow at equilibrium
+      : 0.00032 + Math.abs(gradient) * 0.00003;
+    const n = direction === null ? 3 : activeN;
+    if (n === 0) return;
     setCrossPhases(prev => {
       const next = [...prev];
-      for (let i = 0; i < activeN; i++) next[i] = (next[i] + delta * speed) % 1;
+      for (let i = 0; i < n; i++) next[i] = (next[i] + delta * speed) % 1;
       return next;
     });
   });
@@ -437,17 +674,21 @@ export function OsmosisViewer() {
     <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
       {/* View tabs */}
       <div className="flex border-b border-zinc-100">
-        {(["chamber", "cell"] as const).map(id => (
+        {([
+          ["chamber", "Osmosis Chamber"],
+          ["cell",    "Cell in Solution"],
+          ["utube",   "U-Tube Model"],
+        ] as const).map(([id, label]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex-1 py-3 text-sm font-bold transition-colors
+            className={`flex-1 py-3 text-xs font-bold transition-colors
               ${tab === id
                 ? "border-b-2 border-emerald-500 bg-emerald-50/60 text-emerald-600"
                 : "text-zinc-400 hover:text-zinc-700"}`}
             aria-pressed={tab === id}
           >
-            {id === "chamber" ? "Osmosis Chamber" : "Cell in Solution"}
+            {label}
           </button>
         ))}
       </div>
@@ -484,7 +725,7 @@ export function OsmosisViewer() {
             </div>
             <ChamberStatus leftSolute={leftSolute} rightSolute={rightSolute} />
           </>
-        ) : (
+        ) : tab === "cell" ? (
           <>
             <CellView extSolute={extSolute} />
             <div className="mt-4">
@@ -507,15 +748,41 @@ export function OsmosisViewer() {
             </div>
             <CellStatus extSolute={extSolute} />
           </>
-        )}
+        ) : tab === "utube" ? (
+          <>
+            <UTubeView leftSolute={utLeft} rightSolute={utRight} />
+            <div className="mt-4 grid grid-cols-2 gap-5">
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-zinc-600">
+                  Left solute: <span className="text-orange-500">{utLeft}/10</span>
+                </span>
+                <input type="range" min={0} max={10} step={1}
+                  value={utLeft}
+                  onChange={e => setUtLeft(Number(e.target.value))}
+                  className="w-full accent-orange-500"
+                  aria-label="Left arm solute concentration" />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-zinc-600">
+                  Right solute: <span className="text-orange-500">{utRight}/10</span>
+                </span>
+                <input type="range" min={0} max={10} step={1}
+                  value={utRight}
+                  onChange={e => setUtRight(Number(e.target.value))}
+                  className="w-full accent-orange-500"
+                  aria-label="Right arm solute concentration" />
+              </label>
+            </div>
+            <UTubeStatus leftSolute={utLeft} rightSolute={utRight} />
+          </>
+        ) : null
+        }
       </div>
     </div>
   );
 }
 
 // ─── OsmosisInfoPanel ─────────────────────────────────────────────────────────
-
-type InfoTab = "diffusion" | "osmosis" | "tonicity";
 
 interface InfoTabData {
   id: InfoTab;
@@ -553,7 +820,7 @@ const INFO_TABS: ReadonlyArray<InfoTabData> = [
     heading: "Osmosis — water's own diffusion",
     body: "Osmosis is diffusion restricted to water molecules across a semipermeable membrane. Where solute concentration is higher, water concentration is effectively lower. Water molecules diffuse through aquaporin channels toward the side with more solute, tending to equalize solute concentrations on both sides.",
     points: [
-      "Water moves from LOW solute → HIGH solute (toward the hypertonic side)",
+      "Water crosses toward the HIGH-solute side — it is the water that moves, not the solute",
       "Solute molecules cannot cross the semipermeable membrane",
       "Aquaporin protein channels dramatically speed up water movement",
       "Creates osmotic pressure — measurable force at the membrane",
@@ -574,11 +841,26 @@ const INFO_TABS: ReadonlyArray<InfoTabData> = [
       "Human blood plasma (~0.9% NaCl) is isotonic to red blood cells",
     ],
   },
+  {
+    id: "utube",
+    label: "Osmotic Pressure",
+    accentClass: "text-amber-700",
+    bgClass: "bg-amber-50",
+    dotClass: "bg-amber-500",
+    heading: "Osmotic Pressure — the U-tube in action",
+    body: "When a semipermeable membrane separates two solutions of different concentration, water moves toward the higher-solute side. As water accumulates there, the fluid column grows taller and its extra weight pushes back against further osmosis. The height difference between the two arms is a direct, visible measure of osmotic pressure.",
+    points: [
+      "The hypertonic side gains water — its fluid level rises",
+      "The hypotonic side loses water — its fluid level falls",
+      "At equilibrium the hydrostatic pressure of the taller column exactly balances the osmotic driving force — net flow stops",
+      "AP exam: identify the hypertonic side first — that arm always rises",
+    ],
+  },
 ];
 
 export function OsmosisInfoPanel() {
-  const [active, setActive] = useState<InfoTab>("diffusion");
-  const tab = INFO_TABS.find(t => t.id === active)!;
+  const { infoTab: active, setInfoTab: setActive } = useOsmosis();
+  const tab = INFO_TABS.find(t => t.id === active) ?? INFO_TABS[0];
 
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
@@ -587,7 +869,7 @@ export function OsmosisInfoPanel() {
           <button
             key={id}
             onClick={() => setActive(id)}
-            className={`flex-1 py-3 text-sm font-bold transition-colors
+            className={`flex-1 py-2.5 text-xs font-bold transition-colors leading-tight px-1
               ${active === id
                 ? "border-b-2 border-emerald-500 bg-emerald-50/60 text-emerald-600"
                 : "text-zinc-400 hover:text-zinc-700"}`}

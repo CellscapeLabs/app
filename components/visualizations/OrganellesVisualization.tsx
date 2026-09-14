@@ -675,6 +675,187 @@ export function OrganellesPanel() {
   );
 }
 
+// ─── Plant vs Animal cell comparison ─────────────────────────────────────────
+// Side-by-side SVG comparison of an animal cell and a plant cell.
+// Highlights structures unique to each: centrosome/lysosomes (animal),
+// cell wall/chloroplasts/large central vacuole (plant).
+
+const PLANT_COLORS = {
+  cellWall:    "#86efac",  // green-300 — rigid cell wall
+  chloroplast: "#16a34a",  // green-700 — chloroplasts
+  vacuole:     "#a5f3fc",  // cyan-200  — central vacuole
+};
+
+type HighlightSide = "animal" | "plant" | null;
+
+export function PlantCellComparison() {
+  const [highlight, setHighlight] = useState<HighlightSide>(null);
+
+  // Hover a feature group → dims the other side
+  const animalDim = highlight === "plant";
+  const plantDim  = highlight === "animal";
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+      <div className="border-b border-zinc-100 px-5 py-3">
+        <h3 className="text-sm font-bold text-zinc-900">Animal cell vs. Plant cell</h3>
+        <p className="mt-0.5 text-xs text-zinc-400">Hover each cell to highlight what makes it unique</p>
+      </div>
+      <div className="p-4">
+        <svg viewBox="0 0 600 280" className="w-full" aria-label="Animal cell and plant cell comparison">
+
+          {/* ══ ANIMAL CELL (left half, cx≈140) ══ */}
+          <g
+            style={{ opacity: animalDim ? 0.3 : 1, transition: "opacity 0.2s" }}
+            onMouseEnter={() => setHighlight("animal")}
+            onMouseLeave={() => setHighlight(null)}
+            role="img"
+            aria-label="Animal cell — has centrosome and lysosomes, no cell wall"
+          >
+            {/* Cell membrane */}
+            <circle cx={140} cy={136} r={116}
+              fill="rgba(236,253,245,0.45)" stroke={C.membrane} strokeWidth={2.5} strokeDasharray="10 5" />
+            {/* Nucleus */}
+            <circle cx={140} cy={128} r={46} fill={`${C.nucleus}22`} stroke={C.nucleus} strokeWidth={2} />
+            <circle cx={140} cy={128} r={36} fill={`${C.nucleus}18`} />
+            <text x={140} y={132} textAnchor="middle" fontSize={10} fontWeight={700}
+              fill={C.nucleus} fontFamily="system-ui">nucleus</text>
+            {/* Mitochondria */}
+            <ellipse cx={222} cy={96} rx={24} ry={11} transform="rotate(-25 222 96)"
+              fill={C.mito} fillOpacity={0.7} stroke={C.mito} strokeWidth={1.5} />
+            <ellipse cx={66} cy={168} rx={20} ry={9} transform="rotate(15 66 168)"
+              fill={C.mito} fillOpacity={0.7} stroke={C.mito} strokeWidth={1.5} />
+            {/* Golgi */}
+            <ellipse cx={190} cy={178} rx={22} ry={8}  fill={C.golgi} fillOpacity={0.5} stroke={C.golgi} strokeWidth={1.5} />
+            <ellipse cx={190} cy={192} rx={18} ry={7}  fill={C.golgi} fillOpacity={0.35} stroke={C.golgi} strokeWidth={1} />
+            {/* Centrosome — ANIMAL-ONLY, highlighted */}
+            <g>
+              <ellipse cx={104} cy={84} rx={14} ry={10}
+                fill={C.centrosome} fillOpacity={0.7} stroke={C.centrosome} strokeWidth={2} />
+              <text x={104} y={72} textAnchor="middle" fontSize={9} fontWeight={700}
+                fill={C.centrosome} fontFamily="system-ui">centrosome</text>
+            </g>
+            {/* Lysosome — ANIMAL-ONLY */}
+            <circle cx={192} cy={104} r={10} fill={C.lysosome} fillOpacity={0.8} stroke={C.lysosome} strokeWidth={1.5} />
+            <text x={208} y={96} fontSize={8} fontWeight={700} fill={C.lysosome} fontFamily="system-ui">lysosome</text>
+            {/* Small vacuole */}
+            <circle cx={90} cy={176} r={16}
+              fill={`${C.vacuole}30`} stroke={C.vacuole} strokeWidth={1.5} />
+            {/* Label */}
+            <text x={140} y={266} textAnchor="middle" fontSize={13} fontWeight={800}
+              fill="#1e293b" fontFamily="system-ui">Animal Cell</text>
+          </g>
+
+          {/* Divider */}
+          <line x1={300} y1={10} x2={300} y2={270} stroke="#e2e8f0" strokeWidth={1.5} strokeDasharray="5 4" />
+
+          {/* ══ PLANT CELL (right half, cx≈460) ══ */}
+          <g
+            style={{ opacity: plantDim ? 0.3 : 1, transition: "opacity 0.2s" }}
+            onMouseEnter={() => setHighlight("plant")}
+            onMouseLeave={() => setHighlight(null)}
+            role="img"
+            aria-label="Plant cell — has cell wall, chloroplasts, and large central vacuole"
+          >
+            {/* Cell wall (outer rect) */}
+            <rect x={338} y={14} width={228} height={228} rx={14}
+              fill="none" stroke={PLANT_COLORS.cellWall} strokeWidth={8} />
+            {/* Cell membrane (just inside wall) */}
+            <rect x={346} y={22} width={212} height={212} rx={10}
+              fill="rgba(240,253,244,0.5)" stroke={C.membrane} strokeWidth={1.5} strokeDasharray="8 4" />
+            {/* Large central vacuole — takes up ~60% of the cell */}
+            <rect x={362} y={52} width={178} height={168} rx={8}
+              fill={PLANT_COLORS.vacuole} fillOpacity={0.35} stroke={PLANT_COLORS.vacuole} strokeWidth={2} />
+            <text x={452} y={140} textAnchor="middle" fontSize={10} fontWeight={700}
+              fill="#0891b2" fontFamily="system-ui">central</text>
+            <text x={452} y={153} textAnchor="middle" fontSize={10} fontWeight={700}
+              fill="#0891b2" fontFamily="system-ui">vacuole</text>
+            {/* Nucleus pushed to edge */}
+            <circle cx={390} cy={48} r={28} fill={`${C.nucleus}22`} stroke={C.nucleus} strokeWidth={2} />
+            <text x={390} y={52} textAnchor="middle" fontSize={9} fontWeight={700}
+              fill={C.nucleus} fontFamily="system-ui">nucleus</text>
+            {/* Mitochondria */}
+            <ellipse cx={536} cy={60} rx={20} ry={9} transform="rotate(-20 536 60)"
+              fill={C.mito} fillOpacity={0.7} stroke={C.mito} strokeWidth={1.5} />
+            {/* Chloroplasts — PLANT-ONLY */}
+            <ellipse cx={540} cy={106} rx={22} ry={12}
+              fill={PLANT_COLORS.chloroplast} fillOpacity={0.75} stroke={PLANT_COLORS.chloroplast} strokeWidth={2} />
+            <ellipse cx={532} cy={174} rx={22} ry={12}
+              fill={PLANT_COLORS.chloroplast} fillOpacity={0.75} stroke={PLANT_COLORS.chloroplast} strokeWidth={2} />
+            <text x={560} y={100} fontSize={9} fontWeight={700}
+              fill={PLANT_COLORS.chloroplast} fontFamily="system-ui">chloro-</text>
+            <text x={560} y={111} fontSize={9} fontWeight={700}
+              fill={PLANT_COLORS.chloroplast} fontFamily="system-ui">plast</text>
+            {/* Cell wall label */}
+            <text x={338} y={12} fontSize={9} fontWeight={700}
+              fill={PLANT_COLORS.cellWall} fontFamily="system-ui">cell wall</text>
+            {/* Label */}
+            <text x={452} y={266} textAnchor="middle" fontSize={13} fontWeight={800}
+              fill="#1e293b" fontFamily="system-ui">Plant Cell</text>
+          </g>
+        </svg>
+
+        {/* Comparison key */}
+        <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
+            <p className="mb-2 font-bold text-zinc-700">Animal cell only</p>
+            <ul className="space-y-1 text-zinc-500">
+              <li className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: C.centrosome }} />
+                Centrosome (centrioles for cell division)
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: C.lysosome }} />
+                Lysosomes common; small vacuoles only
+              </li>
+            </ul>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
+            <p className="mb-2 font-bold text-zinc-700">Plant cell only</p>
+            <ul className="space-y-1 text-zinc-500">
+              <li className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: PLANT_COLORS.cellWall }} />
+                Cell wall (cellulose — rigid support)
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: PLANT_COLORS.chloroplast }} />
+                Chloroplasts (photosynthesis)
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: PLANT_COLORS.vacuole }} />
+                Large central vacuole (≥90% of cell volume when mature)
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Shared structures */}
+        <div className="mt-3 rounded-xl border border-zinc-100 bg-zinc-50 p-3">
+          <p className="mb-2 text-xs font-bold text-zinc-700">Found in both cell types</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-zinc-500 sm:grid-cols-3">
+            {[
+              ["nucleus",        C.nucleus,      "Nucleus — DNA storage and gene control"],
+              ["mitochondria",   C.mito,         "Mitochondria — ATP production"],
+              ["rough-er",       C.er,           "Rough ER — protein synthesis"],
+              ["smooth-er",      SER_COLOR,      "Smooth ER — lipid synthesis"],
+              ["golgi",          C.golgi,        "Golgi apparatus — protein packaging"],
+              ["ribosome",       C.er,           "Ribosomes — translate mRNA into protein"],
+              ["cell-membrane",  C.membrane,     "Cell membrane — selective barrier"],
+              ["vacuole",        C.vacuole,      "Vacuoles — storage (size differs)"],
+              ["peroxisome",     C.peroxisome,   "Peroxisomes — detoxification"],
+            ].map(([, color, label]) => (
+              <li key={label} className="flex items-center gap-2 list-none">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                {label}
+              </li>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Emblem (lesson card thumbnail) ──────────────────────────────────────────
 
 export function OrganelleEmblem({ className }: { className?: string }) {

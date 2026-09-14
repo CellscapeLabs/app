@@ -4,6 +4,7 @@ import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
 import {
   OsmosisViewer,
   OsmosisInfoPanel,
+  OsmosisProvider,
 } from "@/components/visualizations/OsmosisSimulator";
 
 export const metadata: Metadata = {
@@ -21,12 +22,12 @@ const KEY_CONCEPTS = [
   {
     icon: "🚫",
     heading: "Solute can't cross",
-    body: "A semipermeable membrane is the key constraint. Solute molecules are too large to fit through aquaporin channels, so only water crosses — magnifying the osmotic effect.",
+    body: "A semipermeable membrane is the key constraint. Most solutes cannot dissolve into the oily lipid bilayer core, so they are blocked. Only water molecules — helped by aquaporin protein channels — can cross freely, which is what makes osmosis possible.",
   },
   {
     icon: "💧",
     heading: "Water follows solute",
-    body: "Counter-intuitive but true: water moves toward higher solute concentration. High solute means low water concentration — water diffuses down its own gradient, not the solute's.",
+    body: "Counter-intuitive but true: water moves toward higher solute concentration. Adding solute to water dilutes it — so the high-solute side is actually the low-water-concentration side. Water diffuses down its own gradient toward the solute, not the other way around.",
   },
 ] as const;
 
@@ -88,6 +89,7 @@ export default function OsmosisPage() {
         </div>
 
         {/* ── Two-column interactive section ── */}
+        <OsmosisProvider>
         <div className="lg:grid lg:grid-cols-[5fr_7fr] lg:items-start lg:gap-8">
 
           {/* Left column — sticky simulator */}
@@ -101,7 +103,7 @@ export default function OsmosisPage() {
           {/* Right column — scrollable content */}
           <div className="space-y-6">
 
-            {/* Concept info panel */}
+            {/* Concept info panel — auto-syncs with the active simulator tab */}
             <OsmosisInfoPanel />
 
             {/* Key concepts */}
@@ -139,7 +141,7 @@ export default function OsmosisPage() {
                       ["What moves",     "Any molecule",          "Water only"],
                       ["Membrane needed","No",                    "Yes (semipermeable)"],
                       ["Energy cost",    "None (passive)",        "None (passive)"],
-                      ["Direction",      "High → low conc.",      "Low solute → high solute"],
+                      ["Direction",      "High → low conc.",      "Water moves toward high-solute side"],
                       ["Stops when",     "Concentrations equal",  "Osmotic pressure balances"],
                     ].map(([prop, diff, osm]) => (
                       <tr key={prop} className="bg-white transition-colors hover:bg-zinc-50">
@@ -203,14 +205,15 @@ export default function OsmosisPage() {
               </Link>
               <Link
                 href="/topics/cell-biology"
-                className="rounded-full bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-600"
+                className="rounded-full border-2 border-zinc-200 px-6 py-2.5 text-sm font-bold text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50"
               >
-                Cell Biology →
+                ↩ Cell Biology
               </Link>
             </div>
 
           </div>
         </div>
+        </OsmosisProvider>
 
       </main>
     </div>

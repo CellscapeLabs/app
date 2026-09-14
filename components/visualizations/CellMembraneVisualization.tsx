@@ -628,11 +628,11 @@ const TABS: Tab[] = [
     subtitle: "Active — ATP Required",
     accent: C.pump,
     accentBg: "rgba(245,158,11,0.07)",
-    description: "Some molecules must be moved against their concentration gradient — from low to high concentration. This requires energy from ATP hydrolysis. The Na⁺/K⁺ pump is the canonical example: it uses one ATP to export 3 Na⁺ ions out of the cell and import 2 K⁺ ions in, maintaining the resting membrane potential essential for nerve and muscle function.",
+    description: "Some molecules must be moved against their concentration gradient — from low to high concentration. This requires energy from ATP hydrolysis. The Na⁺/K⁺ pump is the canonical example: it uses one ATP to export 3 Na⁺ ions out of the cell and import 2 K⁺ ions in, keeping the concentration gradients of each ion steep across the membrane.",
     keyPoints: [
       "Moves solutes against the concentration gradient — requires ATP",
       "Na⁺/K⁺ ATPase exports 3 Na⁺ and imports 2 K⁺ per ATP hydrolysed",
-      "Net charge movement creates the cell's resting membrane potential (−70 mV in neurons)",
+      "Because it moves ions against their gradients, the pump works continuously to maintain those gradients",
       "Accounts for ~25–40% of a cell's total energy budget",
     ],
   },

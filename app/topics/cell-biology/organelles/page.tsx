@@ -5,6 +5,7 @@ import {
   OrganellesProvider,
   OrganellesViewer,
   OrganellesPanel,
+  PlantCellComparison,
 } from "@/components/visualizations/OrganellesVisualization";
 
 export const metadata: Metadata = {
@@ -135,6 +136,14 @@ export default function OrganellesPage() {
                     </tbody>
                   </table>
                 </div>
+              </section>
+
+              {/* Plant vs Animal comparison */}
+              <section>
+                <h2 className="mb-3 text-xl font-bold tracking-tight text-zinc-900">
+                  Animal cell vs. Plant cell
+                </h2>
+                <PlantCellComparison />
               </section>
 
               {/* Key concepts */}
