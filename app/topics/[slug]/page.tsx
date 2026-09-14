@@ -7,6 +7,8 @@ import { MeiosisEmblem } from "@/components/visualizations/MeiosisAnimation";
 import { OrganelleEmblem } from "@/components/visualizations/OrganellesVisualization";
 import { CellMembraneEmblem } from "@/components/visualizations/CellMembraneVisualization";
 import { OsmosisEmblem } from "@/components/visualizations/OsmosisSimulator";
+import { CellularRespirationEmblem } from "@/components/visualizations/CellularRespirationVisualization";
+import { PhotosynthesisEmblem } from "@/components/visualizations/PhotosynthesisVisualization";
 import type React from "react";
 
 // Add an emblem here for each new lesson as it's built
@@ -16,6 +18,8 @@ const EMBLEMS: Record<string, React.ComponentType<{ className?: string }>> = {
   organelles: OrganelleEmblem,
   "cell-membrane": CellMembraneEmblem,
   osmosis: OsmosisEmblem,
+  "cellular-respiration": CellularRespirationEmblem,
+  photosynthesis: PhotosynthesisEmblem,
 };
 
 interface Props { params: Promise<{ slug: string }> }
