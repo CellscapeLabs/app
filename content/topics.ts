@@ -68,7 +68,14 @@ export const TOPICS: Topic[] = [
     id: "genetics",
     title: "Genetics",
     description: "DNA replication, transcription, translation, and inheritance",
-    lessons: [],
+    lessons: [
+      {
+        id: "dna-structure",
+        title: "DNA Structure",
+        slug: "dna-structure",
+        durationMinutes: 15,
+      },
+    ],
   },
   {
     id: "ecosystems",
