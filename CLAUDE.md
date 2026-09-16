@@ -66,8 +66,8 @@ Source of truth: `cellscape_lesson_checklist.html`. Summary below for quick refe
 | 3 | Organelles | ✓ done |
 | 4 | Cell membrane & transport | ✓ done |
 | 5 | Osmosis & diffusion simulator | ✓ done |
-| 6 | Cellular respiration — ATP production | — |
-| 7 | Photosynthesis — light & dark reactions | — |
+| 6 | Cellular respiration — ATP production | ✓ done |
+| 7 | Photosynthesis — light & dark reactions | ✓ done |
 | 8 | The cell cycle & checkpoints | — |
 | 9 | Prokaryotic vs eukaryotic cells | — |
 | 10 | Enzyme activity & inhibition | — |

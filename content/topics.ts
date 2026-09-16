@@ -50,6 +50,18 @@ export const TOPICS: Topic[] = [
         slug: "osmosis",
         durationMinutes: 15,
       },
+      {
+        id: "cellular-respiration",
+        title: "Cellular Respiration",
+        slug: "cellular-respiration",
+        durationMinutes: 20,
+      },
+      {
+        id: "photosynthesis",
+        title: "Photosynthesis",
+        slug: "photosynthesis",
+        durationMinutes: 18,
+      },
     ],
   },
   {
