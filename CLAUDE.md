@@ -76,8 +76,8 @@ Source of truth: `cellscape_lesson_checklist.html`. Summary below for quick refe
 | # | Lesson | Status |
 |---|--------|--------|
 | 1 | DNA structure — double helix explorer | ✓ done |
-| 2 | DNA replication fork animation | up next |
-| 3 | Transcription — DNA to mRNA | — |
+| 2 | DNA replication fork animation | ✓ done |
+| 3 | Transcription — DNA to mRNA | up next |
 | 4 | Translation — mRNA to protein | — |
 | 5 | Mendelian inheritance & Punnett squares | — |
 | 6 | Mutations — types and effects | — |
