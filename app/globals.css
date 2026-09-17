@@ -66,3 +66,12 @@ body {
 .animate-bio-float-1   { animation: bio-float-1 linear infinite; }
 .animate-bio-float-2   { animation: bio-float-2 linear infinite; }
 .animate-bio-float-3   { animation: bio-float-3 linear infinite; }
+
+/* Flowing dashes along pathway arrows (duration set inline from activity level) */
+@keyframes flow-dash {
+  to { stroke-dashoffset: -20; }
+}
+.animate-flow { animation: flow-dash linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-flow { animation: none; }
+}

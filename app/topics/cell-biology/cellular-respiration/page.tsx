@@ -6,11 +6,12 @@ import {
   CellularRespirationViewer,
   CellularRespirationPanel,
 } from "@/components/visualizations/CellularRespirationVisualization";
+import { RespirationSimulator } from "@/components/visualizations/RespirationSimulator";
 
 export const metadata: Metadata = {
   title: "Cellular Respiration — Cell Biology · Cellscape",
   description:
-    "Drag through glycolysis, the Krebs cycle, and the electron transport chain to see how cells convert glucose into ATP.",
+    "Break the respiration pipeline with oxygen loss, cyanide, and uncouplers to see how glycolysis, the Krebs cycle, and the electron transport chain depend on each other.",
 };
 
 const KEY_CONCEPTS = [
@@ -70,10 +71,32 @@ export default function CellularRespirationPage() {
             Cellular Respiration
           </h1>
           <p className="mt-3 max-w-2xl text-lg leading-relaxed text-zinc-500">
-            Every contraction, thought, and cell division runs on ATP. Drag through the three
-            stages of cellular respiration to see exactly how your cells harvest energy from glucose
-            — and why oxygen is the molecule that makes it all possible.
+            Every contraction, thought, and cell division runs on ATP. Your cells make it with a
+            three-stage pipeline where every step depends on the next. Start by breaking it — take
+            away oxygen, add a poison — and watch what fails. Then step through how it works.
           </p>
+        </div>
+
+        {/* ── Simulator ── */}
+        <section className="mb-14" aria-labelledby="sim-heading">
+          <div className="mb-4 max-w-3xl">
+            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-600">What if?</div>
+            <h2 id="sim-heading" className="text-2xl font-black tracking-tight text-zinc-900">
+              Break the pipeline
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+              The map shows one glucose molecule&apos;s path through a working cell. Flip a switch to
+              remove oxygen or add a drug, then follow the red ✕ to see where the pipeline jams — and
+              how the problem spreads backward to the other stages.
+            </p>
+          </div>
+          <RespirationSimulator />
+        </section>
+
+        {/* ── How it works ── */}
+        <div className="mb-5 max-w-3xl">
+          <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-600">How it works</div>
+          <h2 className="text-2xl font-black tracking-tight text-zinc-900">Step through the three stages</h2>
         </div>
 
         {/* ── Two-column interactive section ── */}
