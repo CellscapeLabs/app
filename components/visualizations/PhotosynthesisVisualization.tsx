@@ -19,9 +19,11 @@ import {
   useMotionValue,
   useMotionValueEvent,
   type AnimationPlaybackControls,
+  type MotionValue,
 } from "framer-motion";
 import type React from "react";
 import { lerp, fadeLerp, q } from "@/lib/scrub";
+import { PredictionPrompt, type Prediction } from "@/components/lessons/PredictionPrompt";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -160,16 +162,30 @@ const KF: PSState[] = [
 // ─── Context ──────────────────────────────────────────────────────────────────
 interface PSContextType {
   progress: number;
-  setProgress: (p: number) => void;
+  mv:       MotionValue<number>;
+  snapTo:   (target: number) => void;
 }
-const PSContext = createContext<PSContextType>({ progress: 0, setProgress: () => {} });
-function usePSContext() { return useContext(PSContext); }
+const PSContext = createContext<PSContextType | null>(null);
+function usePSContext() {
+  const ctx = useContext(PSContext);
+  if (!ctx) throw new Error("Must be inside PhotosynthesisProvider");
+  return ctx;
+}
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function PhotosynthesisProvider({ children }: { children: React.ReactNode }) {
   const [progress, setProgress] = useState(0);
+  const mv   = useMotionValue(0);
+  const anim = useRef<AnimationPlaybackControls | null>(null);
+  useMotionValueEvent(mv, "change", (v) => setProgress(v));
+
+  function snapTo(target: number) {
+    anim.current?.stop();
+    anim.current = animate(mv, target, { type: "spring", stiffness: 260, damping: 28 });
+  }
+
   return (
-    <PSContext.Provider value={{ progress, setProgress }}>
+    <PSContext.Provider value={{ progress, mv, snapTo }}>
       {children}
     </PSContext.Provider>
   );
@@ -467,25 +483,16 @@ function InterpolatedDiagram({ progress }: { progress: number }) {
 
 // ─── Viewer ───────────────────────────────────────────────────────────────────
 export function PhotosynthesisViewer() {
-  const { progress, setProgress } = usePSContext();
+  const { progress, mv, snapTo } = usePSContext();
   const dragging = useRef(false);
   const startX   = useRef(0);
   const startP   = useRef(0);
-  const anim     = useRef<AnimationPlaybackControls | null>(null);
-  const mv       = useMotionValue(0);
-
-  useMotionValueEvent(mv, "change", (v) => setProgress(v));
-
-  function snapTo(target: number) {
-    anim.current?.stop();
-    anim.current = animate(mv, target, { type: "spring", stiffness: 260, damping: 28 });
-  }
 
   function onPointerDown(e: React.PointerEvent) {
     dragging.current = true;
     startX.current = e.clientX;
     startP.current = mv.get();
-    anim.current?.stop();
+    mv.stop();
     (e.target as Element).setPointerCapture(e.pointerId);
   }
 
@@ -557,10 +564,46 @@ export function PhotosynthesisViewer() {
 }
 
 // ─── Info panel ───────────────────────────────────────────────────────────────
+// ─── Predictions — asked on a stage, answered by the next one ────────────────
+const PREDICTIONS: Partial<Record<number, Prediction>> = {
+  0: {
+    question: "Plants release O₂. Which molecule do you think that oxygen comes from?",
+    options: ["CO₂", "Glucose", "Water"],
+    correct: 2,
+    explanation: "PS II splits water to replace the electrons it loses, releasing O₂. The oxygen atoms from CO₂ end up in sugar, not in the air.",
+  },
+  2: {
+    question: "Electrons reaching PS I have lost energy. What re-energizes them?",
+    options: ["A second photon absorbed by PS I", "ATP from ATP synthase", "The Calvin cycle"],
+    correct: 0,
+    explanation: "PS I absorbs its own photon, boosting the electrons high enough to reduce NADP⁺ to NADPH.",
+  },
+  3: {
+    question: "H⁺ has piled up inside the thylakoid. How will the chloroplast use that gradient?",
+    options: ["H⁺ combines with O₂ to form water", "H⁺ flows back out through ATP synthase, making ATP", "H⁺ is fed directly into the Calvin cycle"],
+    correct: 1,
+    explanation: "Like water through a turbine, H⁺ rushing through ATP synthase spins it and powers ATP production — chemiosmosis.",
+  },
+  4: {
+    question: "What will the Calvin cycle need from the light reactions?",
+    options: ["O₂ and water", "Glucose", "ATP and NADPH"],
+    correct: 2,
+    explanation: "ATP supplies energy and NADPH supplies high-energy electrons to turn fixed carbon into sugar.",
+  },
+  6: {
+    question: "If the lamp switched off right now, what would happen to the Calvin cycle?",
+    options: ["It would keep going — it doesn’t use light", "It would stop once ATP and NADPH ran out", "It would speed up"],
+    correct: 1,
+    explanation: "It doesn’t absorb light itself, but it depends on ATP and NADPH from the light reactions. Try it in the leaf disk lab above.",
+  },
+};
+
 export function PhotosynthesisPanel() {
-  const { progress } = usePSContext();
+  const { progress, snapTo } = usePSContext();
   const stage = Math.round(Math.max(0, Math.min(progress, KF.length - 1)));
   const s = STAGES[stage];
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const prediction = PREDICTIONS[stage];
 
   return (
     <div className="rounded-2xl border border-zinc-100 bg-white p-6 space-y-4">
@@ -587,6 +630,12 @@ export function PhotosynthesisPanel() {
         <div className="rounded-xl border-l-4 border-amber-400 bg-amber-50 px-4 py-3">
           <p className="text-xs leading-relaxed text-zinc-700">{s.note}</p>
         </div>
+      )}
+
+      {prediction && (
+        <PredictionPrompt key={stage} {...prediction} selected={answers[stage]}
+          onSelect={(i) => setAnswers((prev) => ({ ...prev, [stage]: i }))}
+          onContinue={() => snapTo(Math.min(KF.length - 1, stage + 1))} />
       )}
     </div>
   );

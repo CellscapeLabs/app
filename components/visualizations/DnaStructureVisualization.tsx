@@ -25,6 +25,7 @@ import {
 } from "framer-motion";
 import type React from "react";
 import { fadeLerp } from "@/lib/scrub";
+import { PredictionPrompt, type Prediction } from "@/components/lessons/PredictionPrompt";
 
 // ─── Bases ────────────────────────────────────────────────────────────────────
 export type Base = "A" | "T" | "G" | "C";
@@ -696,8 +697,38 @@ export function DnaStructureViewer() {
 }
 
 // ─── DnaStructurePanel ────────────────────────────────────────────────────────
+// ─── Predictions — asked on a stage, answered by the next one ────────────────
+const PREDICTIONS: Partial<Record<number, Prediction>> = {
+  0: {
+    question: "If you untwisted the helix into a ladder, what would its two rails be made of?",
+    options: ["Nitrogenous bases", "Alternating sugars and phosphates", "Hydrogen bonds"],
+    correct: 1,
+    explanation: "The rails are the sugar-phosphate backbone. The bases point inward and form the rungs.",
+  },
+  1: {
+    question: "Adenine has two rings. Which base must it pair with to keep the helix the same width everywhere?",
+    options: ["Thymine — one ring", "Guanine — two rings", "Another adenine"],
+    correct: 0,
+    explanation: "A two-ring purine always pairs with a one-ring pyrimidine, so every rung is the same length. A pairs with T.",
+  },
+  2: {
+    question: "If the top strand runs 5′ → 3′ from left to right, which way does its partner run?",
+    options: ["Also 5′ → 3′ from left to right", "It has no direction", "5′ → 3′ from right to left"],
+    correct: 2,
+    explanation: "The strands are antiparallel — the partner runs the opposite way, so reading left to right it goes 3′ → 5′.",
+  },
+  3: {
+    question: "A nucleotide has three parts. Which of these is NOT one of them?",
+    options: ["A phosphate group", "An amino acid", "A deoxyribose sugar"],
+    correct: 1,
+    explanation: "Amino acids are the building blocks of proteins. A nucleotide is a phosphate, a deoxyribose sugar, and a nitrogenous base.",
+  },
+};
+
 export function DnaStructurePanel() {
   const { snapIdx, progressPct, cur, springTo } = useDnaCtx();
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const prediction = PREDICTIONS[snapIdx];
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="p-5" style={{ background: cur.accentBg }}>
@@ -729,6 +760,11 @@ export function DnaStructurePanel() {
             </li>
           ))}
         </ul>
+        {prediction && (
+          <PredictionPrompt key={snapIdx} {...prediction} selected={answers[snapIdx]}
+            onSelect={(i) => setAnswers((prev) => ({ ...prev, [snapIdx]: i }))}
+            onContinue={() => springTo(Math.min(STAGE_COUNT - 1, snapIdx + 1))} />
+        )}
       </div>
       <div className="border-t border-zinc-100 px-5 py-3">
         <div className="mb-2 h-1 w-full rounded-full bg-zinc-100">
