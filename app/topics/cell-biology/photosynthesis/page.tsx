@@ -1,16 +1,19 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
+import { LessonProgress } from "@/components/lessons/LessonProgress";
+import { ScrollHint } from "@/components/lessons/ScrollHint";
 import {
   PhotosynthesisProvider,
   PhotosynthesisViewer,
   PhotosynthesisPanel,
 } from "@/components/visualizations/PhotosynthesisVisualization";
+import { LeafDiskLab } from "@/components/visualizations/LeafDiskLab";
 
 export const metadata: Metadata = {
   title: "Photosynthesis — Cell Biology · Cellscape",
   description:
-    "Drag through the light reactions and Calvin cycle to see how chloroplasts convert sunlight, water, and CO₂ into glucose.",
+    "Run a virtual leaf disk lab to find what limits photosynthesis, then step through the light reactions and Calvin cycle inside the chloroplast.",
 };
 
 const KEY_CONCEPTS = [
@@ -49,7 +52,9 @@ export default function PhotosynthesisPage() {
             ← Cell Biology
           </Link>
         </div>
+        <LessonProgress color="emerald" />
       </nav>
+      <ScrollHint />
 
       <main className="mx-auto max-w-6xl px-6 pb-24">
 
@@ -79,10 +84,34 @@ export default function PhotosynthesisPage() {
             Photosynthesis
           </h1>
           <p className="mt-3 max-w-2xl text-lg leading-relaxed text-zinc-500">
-            Every plant, algae, and cyanobacterium runs on the same two-stage engine.
-            Drag through the light reactions and the Calvin cycle to see how sunlight
-            and CO₂ become glucose — and why the two stages can&apos;t live without each other.
+            Every plant, algae, and cyanobacterium runs on the same two-stage engine. Start in
+            the lab: change the light, CO₂, and temperature and watch leaf disks float as they
+            fill with oxygen. Then look inside the chloroplast to see why your results turned
+            out the way they did.
           </p>
+        </div>
+
+        {/* ── Virtual lab ── */}
+        <section className="mb-14" aria-labelledby="lab-heading">
+          <div className="mb-4 max-w-3xl">
+            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-600">Virtual lab</div>
+            <h2 id="lab-heading" className="text-2xl font-black tracking-tight text-zinc-900">
+              The leaf disk assay
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+              Small disks punched from a spinach leaf are soaked in bicarbonate solution (a CO₂
+              source) until they sink. Under a lamp, photosynthesis makes O₂, which collects inside
+              the leaf tissue and floats the disks back up. The faster photosynthesis runs, the
+              sooner they rise. Set up a trial, run it, and compare.
+            </p>
+          </div>
+          <LeafDiskLab />
+        </section>
+
+        {/* ── How it works ── */}
+        <div className="mb-5 max-w-3xl">
+          <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-600">How it works</div>
+          <h2 className="text-2xl font-black tracking-tight text-zinc-900">Inside the chloroplast</h2>
         </div>
 
         {/* ── Two-column interactive section ── */}

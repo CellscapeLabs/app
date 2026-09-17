@@ -1,11 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
+import { LessonProgress } from "@/components/lessons/LessonProgress";
+import { ScrollHint } from "@/components/lessons/ScrollHint";
 import {
   MeiosisProvider,
   MeiosisViewer,
   MeiosisPanel,
 } from "@/components/visualizations/MeiosisAnimation";
+import { GameteBuilder } from "@/components/visualizations/GameteBuilder";
 
 export const metadata: Metadata = {
   title: "Meiosis — Cell Biology · Cellscape",
@@ -47,7 +50,9 @@ export default function MeiosisPage() {
             ← Cell Biology
           </Link>
         </div>
+        <LessonProgress color="emerald" />
       </nav>
+      <ScrollHint />
 
       <main className="mx-auto max-w-6xl px-6 pb-24">
 
@@ -70,8 +75,31 @@ export default function MeiosisPage() {
           <p className="mt-3 max-w-2xl text-lg leading-relaxed text-zinc-500">
             Every sperm and egg is the product of meiosis — two back-to-back divisions that halve
             the chromosome count and shuffle the genetic deck. Learn how one diploid cell becomes
-            four unique haploid gametes.
+            four unique haploid gametes — then build some yourself and see how many different
+            ones a single cell can make.
           </p>
+        </div>
+
+        {/* ── Gamete builder ── */}
+        <section className="mb-14" aria-labelledby="builder-heading">
+          <div className="mb-4 max-w-3xl">
+            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-violet-600">Build it</div>
+            <h2 id="builder-heading" className="text-2xl font-black tracking-tight text-zinc-900">
+              How many different gametes can one cell make?
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+              This cell has three pairs of chromosomes — one copy of each from the mother, one from
+              the father. Choose how the pairs line up, decide whether crossing over happens, and
+              divide. Every new combination you find goes into your collection.
+            </p>
+          </div>
+          <GameteBuilder />
+        </section>
+
+        {/* ── How it works ── */}
+        <div className="mb-5 max-w-3xl">
+          <div className="mb-1 text-xs font-bold uppercase tracking-widest text-violet-600">How it works</div>
+          <h2 className="text-2xl font-black tracking-tight text-zinc-900">Step through meiosis I and II</h2>
         </div>
 
         {/* ── Two-column interactive section ── */}
