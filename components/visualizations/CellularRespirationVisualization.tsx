@@ -19,6 +19,7 @@ import {
   type AnimationPlaybackControls,
 } from "framer-motion";
 import type React from "react";
+import { lerp, fadeLerp, q } from "@/lib/scrub";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -36,31 +37,27 @@ const C = {
   electron: "#1e293b",   // dark
 };
 
-// ─── Lerp helpers ─────────────────────────────────────────────────────────────
-function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
-
 // ─── Interpolated state ───────────────────────────────────────────────────────
 interface CRState {
-  // Region highlights (0 = off, 1 = full)
+  // Region highlights (0 = off, 1 = full) — fills, so they blend linearly
   cytoHL:    number;
   matrixHL:  number;
   membHL:    number;
 
-  // Glucose molecule
-  glucX:  number;
-  glucOp: number;
+  // Element opacities — cross-faded so stages never double-expose
+  glucOp:        number;
+  pyrOp:         number;
+  glycoLabelOp:  number;
+  matrixLabelOp: number;
+  acetylOp:      number;
+  krebsOp:       number;
+  co2Op:         number;
+  etcOp:         number;
+  hplusOp:       number;
 
-  // Pyruvate × 2 (symmetric about CY)
+  // Pyruvate × 2 position (symmetric about CY)
   pyrX:  number;
-  pyrDY: number;  // y-offset from center: one at CY-pyrDY, one at CY+pyrDY
-  pyrOp: number;
-
-  // Acetyl-CoA, CO₂, Krebs, ETC
-  acetylOp:   number;
-  co2Op:      number;
-  krebsOp:    number;
-  etcOp:      number;
-  hplusOp:    number;
+  pyrDY: number;
 
   // Running totals
   atpCount:   number;
@@ -68,67 +65,70 @@ interface CRState {
   fadh2Count: number;
 }
 
+const FADE_KEYS = new Set<keyof CRState>([
+  "glucOp", "pyrOp", "glycoLabelOp", "matrixLabelOp", "acetylOp", "krebsOp", "co2Op", "etcOp", "hplusOp",
+]);
+
 function lerpState(a: CRState, b: CRState, t: number): CRState {
-  return {
-    cytoHL:    lerp(a.cytoHL,    b.cytoHL,    t),
-    matrixHL:  lerp(a.matrixHL,  b.matrixHL,  t),
-    membHL:    lerp(a.membHL,    b.membHL,    t),
-    glucX:     lerp(a.glucX,     b.glucX,     t),
-    glucOp:    lerp(a.glucOp,    b.glucOp,    t),
-    pyrX:      lerp(a.pyrX,      b.pyrX,      t),
-    pyrDY:     lerp(a.pyrDY,     b.pyrDY,     t),
-    pyrOp:     lerp(a.pyrOp,     b.pyrOp,     t),
-    acetylOp:  lerp(a.acetylOp,  b.acetylOp,  t),
-    co2Op:     lerp(a.co2Op,     b.co2Op,     t),
-    krebsOp:   lerp(a.krebsOp,   b.krebsOp,   t),
-    etcOp:     lerp(a.etcOp,     b.etcOp,     t),
-    hplusOp:   lerp(a.hplusOp,   b.hplusOp,   t),
-    atpCount:  lerp(a.atpCount,  b.atpCount,  t),
-    nadhCount: lerp(a.nadhCount, b.nadhCount, t),
-    fadh2Count:lerp(a.fadh2Count,b.fadh2Count,t),
-  };
+  const out = { ...a };
+  (Object.keys(a) as (keyof CRState)[]).forEach((k) => {
+    out[k] = FADE_KEYS.has(k) ? fadeLerp(a[k], b[k], t) : lerp(a[k], b[k], t);
+  });
+  return out;
 }
 
-// ─── Keyframes ────────────────────────────────────────────────────────────────
-// Cell center: CX=200, CY=140
-// Cell outer: rx=182, ry=126
-// Mito outer: rx=118, ry=80  (center 200,140)
-// Inner membrane: rx=86, ry=55
+// ─── Geometry ─────────────────────────────────────────────────────────────────
+// Cell (CX, CY) rx=186 ry=114. The mitochondrion sits right of centre so the
+// cytoplasm on the left has room for glycolysis. Everything stays above the
+// running-totals strip at y=252.
+const CX = 200, CY = 126;
+const CELL_RX = 186, CELL_RY = 114;
+const MX = 236;
+const MITO_RX = 114, MITO_RY = 80;
+const INNER_RX = 84, INNER_RY = 54;
+const GLUC_X = 66;                     // glycolysis happens here, in the cytoplasm
+const KX = MX + 4, KR = 34;            // Krebs cycle ring
 
+function onEllipse(rx: number, ry: number, deg: number) {
+  const a = (deg * Math.PI) / 180;
+  return { x: q(MX + rx * Math.cos(a)), y: q(CY + ry * Math.sin(a)) };
+}
+
+// H⁺ ions in the intermembrane space, spaced between the four e⁻ arrows
+const HPLUS_POS = [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5].map((d) => onEllipse(99, 67, d));
+const SYNTHASE = onEllipse(INNER_RX, INNER_RY, 135);
+
+const krebsStart = { x: q(KX + KR * Math.cos(-Math.PI / 3)), y: q(CY + KR * Math.sin(-Math.PI / 3)) };
+const krebsEnd   = { x: q(KX + KR * Math.cos((4 * Math.PI) / 3)), y: q(CY + KR * Math.sin((4 * Math.PI) / 3)) };
+const KREBS_ARC  = `M ${krebsStart.x},${krebsStart.y} A ${KR},${KR} 0 1,1 ${krebsEnd.x},${krebsEnd.y}`;
+
+// ─── Keyframes ────────────────────────────────────────────────────────────────
 const CS: CRState[] = [
   // 0 — Glucose
-  { cytoHL:0,    matrixHL:0,    membHL:0,
-    glucX:38,    glucOp:1,
-    pyrX:110,    pyrDY:28,      pyrOp:0,
-    acetylOp:0,  co2Op:0,       krebsOp:0,   etcOp:0,   hplusOp:0,
-    atpCount:0,  nadhCount:0,   fadh2Count:0 },
-  // 1 — Glycolysis
-  { cytoHL:1,    matrixHL:0,    membHL:0,
-    glucX:75,    glucOp:0.18,
-    pyrX:112,    pyrDY:28,      pyrOp:1,
-    acetylOp:0,  co2Op:0,       krebsOp:0,   etcOp:0,   hplusOp:0,
-    atpCount:2,  nadhCount:2,   fadh2Count:0 },
-  // 2 — Krebs Cycle
-  { cytoHL:0.15, matrixHL:1,    membHL:0,
-    glucX:75,    glucOp:0,
-    pyrX:132,    pyrDY:12,      pyrOp:0.28,
-    acetylOp:1,  co2Op:1,       krebsOp:1,   etcOp:0,   hplusOp:0,
-    atpCount:4,  nadhCount:8,   fadh2Count:2 },
+  { cytoHL:0,    matrixHL:0,   membHL:0,
+    glucOp:1,    pyrOp:0,      glycoLabelOp:0, matrixLabelOp:1,
+    acetylOp:0,  krebsOp:0,    co2Op:0,        etcOp:0,  hplusOp:0,
+    pyrX:GLUC_X, pyrDY:0,
+    atpCount:0,  nadhCount:0,  fadh2Count:0 },
+  // 1 — Glycolysis: glucose splits into two pyruvate in the cytoplasm
+  { cytoHL:1,    matrixHL:0,   membHL:0,
+    glucOp:0,    pyrOp:1,      glycoLabelOp:1, matrixLabelOp:1,
+    acetylOp:0,  krebsOp:0,    co2Op:0,        etcOp:0,  hplusOp:0,
+    pyrX:GLUC_X, pyrDY:23,
+    atpCount:2,  nadhCount:2,  fadh2Count:0 },
+  // 2 — Krebs Cycle: pyruvate heads into the matrix and becomes acetyl-CoA
+  { cytoHL:0,    matrixHL:1,   membHL:0,
+    glucOp:0,    pyrOp:0,      glycoLabelOp:0, matrixLabelOp:0,
+    acetylOp:1,  krebsOp:1,    co2Op:1,        etcOp:0,  hplusOp:0,
+    pyrX:150,    pyrDY:14,
+    atpCount:4,  nadhCount:10, fadh2Count:2 },
   // 3 — ETC
-  { cytoHL:0.08, matrixHL:0.2,  membHL:1,
-    glucX:75,    glucOp:0,
-    pyrX:132,    pyrDY:12,      pyrOp:0,
-    acetylOp:0.18,co2Op:0.45,  krebsOp:0.28, etcOp:1,  hplusOp:1,
-    atpCount:36, nadhCount:10,  fadh2Count:2 },
+  { cytoHL:0,    matrixHL:0,   membHL:1,
+    glucOp:0,    pyrOp:0,      glycoLabelOp:0, matrixLabelOp:0,
+    acetylOp:0,  krebsOp:0,    co2Op:0,        etcOp:1,  hplusOp:1,
+    pyrX:150,    pyrDY:14,
+    atpCount:36, nadhCount:10, fadh2Count:2 },
 ];
-
-// ─── H⁺ positions in intermembrane space ─────────────────────────────────────
-// Between inner (rx=86,ry=55) and outer (rx=118,ry=80) mito membranes, cx=200,cy=140
-// Using midpoint radii rx≈102, ry≈67
-const HPLUS_POS = [
-  { x:302, y:140 }, { x:272, y: 93 }, { x:200, y: 73 }, { x:128, y: 93 },
-  { x: 98, y:140 }, { x:128, y:187 }, { x:200, y:207 }, { x:272, y:187 },
-] as const;
 
 // ─── Molecule label ───────────────────────────────────────────────────────────
 interface MolProps { cx: number; cy: number; r: number; color: string; label: string; sub?: string; op?: number; }
@@ -141,7 +141,7 @@ function Mol({ cx, cy, r, color, label, sub, op = 1 }: MolProps) {
       <text x={cx} y={cy + (sub ? -2 : fs * 0.38)} textAnchor="middle"
         fontSize={fs} fontWeight={700} fill="white" fontFamily="system-ui" pointerEvents="none">{label}</text>
       {sub && (
-        <text x={cx} y={cy + 10} textAnchor="middle" fontSize={7} fontWeight={500}
+        <text x={cx} y={cy + 9} textAnchor="middle" fontSize={7} fontWeight={500}
           fill="white" fontFamily="system-ui" pointerEvents="none">{sub}</text>
       )}
     </g>
@@ -149,206 +149,139 @@ function Mol({ cx, cy, r, color, label, sub, op = 1 }: MolProps) {
 }
 
 // ─── Interpolated cell diagram ────────────────────────────────────────────────
-function InterpolatedDiagram({ progress, viewBox: vb = "0 0 400 280" }: { progress: number; viewBox?: string }) {
+function InterpolatedDiagram({ progress }: { progress: number }) {
   const clamped = Math.max(0, Math.min(progress, CS.length - 1));
   const fi = Math.min(Math.floor(clamped), CS.length - 2);
-  const t  = clamped - fi;
-  const s  = lerpState(CS[fi], CS[Math.min(fi + 1, CS.length - 1)], t);
+  const s  = lerpState(CS[fi], CS[fi + 1], clamped - fi);
 
-  const CX = 200;
-  const CY = 140;
   const atp  = Math.round(s.atpCount);
   const nadh = Math.round(s.nadhCount);
   const fad  = Math.round(s.fadh2Count);
 
-  // Krebs cycle: nearly-complete arc path (clockwise) centered at (CX, CY), r=38
-  const KR = 38;
-  const krebsArc = `M ${CX},${CY - KR} A ${KR},${KR} 0 1,1 ${CX - 1},${CY - KR}`;
-
   return (
-    <svg viewBox={vb} className="w-full h-full" aria-label="Cellular respiration diagram">
+    <svg viewBox="0 0 400 280" className="w-full h-full" aria-label="Cellular respiration diagram">
       <defs>
         {/* Cytoplasm mask: inside cell, outside mito */}
         <mask id="cr-cyto-mask">
-          <ellipse cx={CX} cy={CY} rx={182} ry={126} fill="white" />
-          <ellipse cx={CX} cy={CY} rx={118} ry={80}  fill="black" />
+          <ellipse cx={CX} cy={CY} rx={CELL_RX} ry={CELL_RY} fill="white" />
+          <ellipse cx={MX} cy={CY} rx={MITO_RX} ry={MITO_RY} fill="black" />
         </mask>
 
-        {/* Arrow markers */}
-        <marker id="cr-arr-g" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-          <path d="M0,0 L0,7 L7,3.5 z" fill={C.atp} />
+        {/* Arrow markers — sized in user space so thick strokes don't inflate them */}
+        <marker id="cr-arr-e" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+          <path d="M0,0 L0,9 L9,4.5 z" fill={C.electron} />
         </marker>
-        <marker id="cr-arr-e" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-          <path d="M0,0 L0,7 L7,3.5 z" fill={C.electron} />
+        <marker id="cr-arr-k" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto">
+          <path d="M0,0 L0,9 L9,4.5 z" fill={C.mito} />
         </marker>
-        <marker id="cr-arr-k" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-          <path d="M0,0 L0,7 L7,3.5 z" fill={C.mito} />
-        </marker>
-        <marker id="cr-arr-co2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L6,3 z" fill={C.co2} />
+        <marker id="cr-arr-h" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+          <path d="M0,0 L0,7 L7,3.5 z" fill={C.hplus} />
         </marker>
       </defs>
 
       {/* ── Cytoplasm highlight ── */}
       {s.cytoHL > 0.01 && (
-        <rect x={0} y={0} width={400} height={280}
-          fill="#10b981" fillOpacity={s.cytoHL * 0.1} mask="url(#cr-cyto-mask)" />
+        <rect x={0} y={0} width={400} height={252}
+          fill={C.cell} fillOpacity={s.cytoHL * 0.1} mask="url(#cr-cyto-mask)" />
       )}
 
       {/* ── Cell outer membrane ── */}
-      <ellipse cx={CX} cy={CY} rx={182} ry={126}
+      <ellipse cx={CX} cy={CY} rx={CELL_RX} ry={CELL_RY}
         fill="rgba(16,185,129,0.04)" stroke={C.cell} strokeWidth={2.5} strokeDasharray="10 5" />
 
       {/* ── Mitochondrion outer membrane ── */}
-      <ellipse cx={CX} cy={CY} rx={118} ry={80}
+      <ellipse cx={MX} cy={CY} rx={MITO_RX} ry={MITO_RY}
         fill="rgba(245,158,11,0.05)" stroke={C.mito} strokeWidth={2} />
 
       {/* ── Matrix highlight ── */}
       {s.matrixHL > 0.01 && (
-        <ellipse cx={CX} cy={CY} rx={86} ry={55}
-          fill="#f59e0b" fillOpacity={s.matrixHL * 0.12} />
+        <ellipse cx={MX} cy={CY} rx={INNER_RX} ry={INNER_RY}
+          fill={C.mito} fillOpacity={s.matrixHL * 0.12} />
       )}
 
       {/* ── Inner membrane (cristae) ── */}
-      <ellipse cx={CX} cy={CY} rx={86} ry={55}
+      <ellipse cx={MX} cy={CY} rx={INNER_RX} ry={INNER_RY}
         fill="none"
         stroke={C.inner}
         strokeWidth={lerp(1.5, 4, s.membHL)}
         strokeOpacity={lerp(0.35, 1, s.membHL)} />
 
-      {/* ── Static region labels ── */}
-      <text x={62}  y={62}  fontSize={10} fontWeight={700} fill={C.cell}
-        fontFamily="system-ui" opacity={0.55} letterSpacing={0.5}>CYTOPLASM</text>
-      <text x={148} y={72}  fontSize={9}  fontWeight={600} fill={C.mito}
-        fontFamily="system-ui" opacity={0.6}>MITOCHONDRION</text>
-      <text x={CX}  y={CY + 4} textAnchor="middle" fontSize={9} fontWeight={600}
-        fill={C.inner} fontFamily="system-ui" opacity={lerp(0.35, 0.0, s.krebsOp)}>MATRIX</text>
-
-      {/* ── Glucose molecule ── */}
-      <Mol cx={s.glucX} cy={CY} r={22} color={C.glucose} label="C₆H₁₂O₆" sub="Glucose" op={s.glucOp} />
-
-      {/* ── Glycolysis arrow (glucose → cell interior) ── */}
-      {s.glucOp > 0.3 && (
-        <line x1={s.glucX + 24} y1={CY} x2={s.glucX + 44} y2={CY}
-          stroke={C.atp} strokeWidth={1.5} strokeDasharray="4 3"
-          markerEnd="url(#cr-arr-g)" opacity={s.glucOp * 0.7} />
+      {/* ── Region labels — each in its own gap between membranes ── */}
+      <text x={MX} y={34} textAnchor="middle" fontSize={9} fontWeight={700} fill={C.cell}
+        fontFamily="system-ui" opacity={0.7} letterSpacing={0.5}>CYTOPLASM</text>
+      <text x={MX} y={225} textAnchor="middle" fontSize={8.5} fontWeight={700} fill={C.mito}
+        fontFamily="system-ui" opacity={0.8} letterSpacing={0.5}>MITOCHONDRION</text>
+      {s.matrixLabelOp > 0.01 && (
+        <text x={MX} y={CY + 3} textAnchor="middle" fontSize={9} fontWeight={600}
+          fill={C.inner} fontFamily="system-ui" opacity={0.45 * s.matrixLabelOp}>MATRIX</text>
       )}
 
-      {/* ── Pyruvate × 2 ── */}
+      {/* ── Stage 1: glucose → 2 pyruvate, in the cytoplasm ── */}
+      <Mol cx={GLUC_X} cy={CY} r={22} color={C.glucose} label="C₆H₁₂O₆" sub="Glucose" op={s.glucOp} />
       <Mol cx={s.pyrX} cy={CY - s.pyrDY} r={16} color={C.pyruvate} label="Pyr" sub="C₃" op={s.pyrOp} />
       <Mol cx={s.pyrX} cy={CY + s.pyrDY} r={16} color={C.pyruvate} label="Pyr" sub="C₃" op={s.pyrOp} />
-
-      {/* ── Arrows from pyruvate into mitochondrion ── */}
-      {s.pyrOp > 0.15 && s.pyrX > 118 && (
-        <>
-          <line x1={s.pyrX + 18} y1={CY - s.pyrDY} x2={s.pyrX + 38} y2={CY - s.pyrDY * 0.3}
-            stroke="#94a3b8" strokeWidth={1.2} strokeDasharray="3 3" markerEnd="url(#cr-arr-k)"
-            opacity={s.pyrOp * 0.5} />
-          <line x1={s.pyrX + 18} y1={CY + s.pyrDY} x2={s.pyrX + 38} y2={CY + s.pyrDY * 0.3}
-            stroke="#94a3b8" strokeWidth={1.2} strokeDasharray="3 3" markerEnd="url(#cr-arr-k)"
-            opacity={s.pyrOp * 0.5} />
-        </>
+      {s.glycoLabelOp > 0.01 && (
+        <text x={GLUC_X + 12} y={180} textAnchor="middle" fontSize={10} fontWeight={800} fill={C.cell}
+          fontFamily="system-ui" opacity={s.glycoLabelOp}>Glycolysis</text>
       )}
 
-      {/* ── Acetyl-CoA × 2 in matrix ── */}
-      <Mol cx={CX - 28} cy={CY - 14} r={13} color={C.acetyl} label="AcCoA" op={s.acetylOp} />
-      <Mol cx={CX + 28} cy={CY + 14} r={13} color={C.acetyl} label="AcCoA" op={s.acetylOp} />
-
-      {/* ── CO₂ bubbles drifting out of matrix ── */}
-      {s.co2Op > 0.01 && (
-        <>
-          <Mol cx={CX - 50} cy={CY - 68} r={10} color={C.co2} label="CO₂" op={s.co2Op} />
-          <Mol cx={CX}      cy={CY - 74} r={10} color={C.co2} label="CO₂" op={s.co2Op * 0.9} />
-          <Mol cx={CX + 50} cy={CY - 68} r={10} color={C.co2} label="CO₂" op={s.co2Op * 0.8} />
-          {/* Arrows from matrix to intermembrane space */}
-          <line x1={CX - 50} y1={CY - 58} x2={CX - 50} y2={CY - 46}
-            stroke={C.co2} strokeWidth={1} strokeDasharray="3 2" markerEnd="url(#cr-arr-co2)"
-            opacity={s.co2Op * 0.6} />
-          <line x1={CX} y1={CY - 64} x2={CX} y2={CY - 52}
-            stroke={C.co2} strokeWidth={1} strokeDasharray="3 2" markerEnd="url(#cr-arr-co2)"
-            opacity={s.co2Op * 0.6} />
-        </>
-      )}
-
-      {/* ── Krebs cycle arc ── */}
+      {/* ── Stage 2: acetyl-CoA feeds the Krebs cycle; CO₂ released ── */}
+      <Mol cx={182} cy={CY} r={15} color={C.acetyl} label="AcCoA" sub="×2" op={s.acetylOp} />
       {s.krebsOp > 0.01 && (
         <g opacity={s.krebsOp}>
-          <path d={krebsArc} fill="none" stroke={C.mito} strokeWidth={2.5} />
-          {/* Clockwise arrowhead at the end of the arc (near top-right) */}
-          <polygon
-            points={`${CX - 1},${CY - KR} ${CX - 9},${CY - KR + 7} ${CX + 6},${CY - KR + 3}`}
-            fill={C.mito} />
-          {/* "Krebs Cycle" label in center */}
-          <text x={CX} y={CY - 4} textAnchor="middle" fontSize={9} fontWeight={800}
+          <path d={KREBS_ARC} fill="none" stroke={C.mito} strokeWidth={2.5} markerEnd="url(#cr-arr-k)" />
+          <text x={KX} y={CY - 2} textAnchor="middle" fontSize={9} fontWeight={800}
             fill={C.mito} fontFamily="system-ui">Krebs</text>
-          <text x={CX} y={CY + 8} textAnchor="middle" fontSize={9} fontWeight={800}
-            fill={C.mito} fontFamily="system-ui">Cycle</text>
+          <text x={KX} y={CY + 9} textAnchor="middle" fontSize={9} fontWeight={800}
+            fill={C.mito} fontFamily="system-ui">cycle</text>
         </g>
       )}
+      <Mol cx={296} cy={CY - 18} r={11} color={C.co2} label="CO₂" op={s.co2Op} />
+      <Mol cx={296} cy={CY + 18} r={11} color={C.co2} label="CO₂" op={s.co2Op} />
 
-      {/* ── ETC: electron flow arrows around inner membrane ── */}
+      {/* ── Stage 3: electron transport chain on the inner membrane ── */}
       {s.etcOp > 0.01 && (
-        <g opacity={s.etcOp}>
-          {/* Top → right (arrow at top pointing right) */}
-          <line x1={186} y1={85} x2={214} y2={85}
+        <g opacity={s.etcOp} fontFamily="system-ui">
+          {/* Electron flow, clockwise along the membrane */}
+          <line x1={MX - 14} y1={CY - INNER_RY} x2={MX + 14} y2={CY - INNER_RY}
             stroke={C.electron} strokeWidth={2} markerEnd="url(#cr-arr-e)" />
-          {/* Right → bottom (arrow at right pointing down) */}
-          <line x1={286} y1={126} x2={286} y2={154}
+          <line x1={MX + INNER_RX} y1={CY - 14} x2={MX + INNER_RX} y2={CY + 14}
             stroke={C.electron} strokeWidth={2} markerEnd="url(#cr-arr-e)" />
-          {/* Bottom → left (arrow at bottom pointing left) */}
-          <line x1={214} y1={195} x2={186} y2={195}
+          <line x1={MX + 14} y1={CY + INNER_RY} x2={MX - 14} y2={CY + INNER_RY}
             stroke={C.electron} strokeWidth={2} markerEnd="url(#cr-arr-e)" />
-          {/* Left → top (arrow at left pointing up) */}
-          <line x1={114} y1={154} x2={114} y2={126}
+          <line x1={MX - INNER_RX} y1={CY + 14} x2={MX - INNER_RX} y2={CY - 14}
             stroke={C.electron} strokeWidth={2} markerEnd="url(#cr-arr-e)" />
-          {/* "e⁻" label near right arrow */}
-          <text x={296} y={143} fontSize={9} fontWeight={700} fill={C.electron} fontFamily="system-ui">e⁻</text>
-          {/* ATP synthase badge at bottom of inner membrane */}
-          <rect x={185} y={200} width={30} height={16} rx={8}
-            fill={C.atp} fillOpacity={0.18} stroke={C.atp} strokeWidth={1.2} />
-          <text x={200} y={212} textAnchor="middle" fontSize={8} fontWeight={800}
-            fill={C.atp} fontFamily="system-ui">ATP-S</text>
-          {/* H⁺ flow arrow downward through ATP synthase */}
-          <line x1={200} y1={170} x2={200} y2={198}
-            stroke={C.hplus} strokeWidth={1.5} strokeDasharray="3 2" markerEnd="url(#cr-arr-e)" />
-          {/* "O₂" label at Complex IV position (right side) */}
-          <circle cx={282} cy={168} r={9} fill={C.co2} fillOpacity={0.18} stroke={C.co2} strokeWidth={1} />
-          <text x={282} y={172} textAnchor="middle" fontSize={7} fontWeight={700}
-            fill={C.co2} fontFamily="system-ui">O₂</text>
-          <text x={330} y={165} fontSize={8} fontWeight={600} fill={C.co2}
-            fontFamily="system-ui">→ H₂O</text>
+
+          <text x={MX} y={CY - 36} textAnchor="middle" fontSize={8} fontWeight={700} fill={C.inner}>
+            Inner membrane
+          </text>
+          <text x={MX + INNER_RX - 10} y={CY + 3} textAnchor="end" fontSize={9} fontWeight={700} fill={C.electron}>e⁻</text>
+
+          {/* Payoff */}
+          <text x={MX - 12} y={CY + 2} textAnchor="middle" fontSize={13} fontWeight={900} fill={C.atp}>+32 ATP</text>
+
+          {/* O₂ is the final electron acceptor */}
+          <circle cx={262} cy={CY + 22} r={10} fill={C.co2} fillOpacity={0.18} stroke={C.co2} strokeWidth={1} />
+          <text x={262} y={CY + 25} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="#64748b">O₂</text>
+          <text x={276} y={CY + 25} fontSize={8} fontWeight={600} fill="#64748b">→ H₂O</text>
+
+          {/* ATP synthase: H⁺ flows back into the matrix */}
+          <circle cx={SYNTHASE.x} cy={SYNTHASE.y} r={8} fill={C.atp} fillOpacity={0.25} stroke={C.atp} strokeWidth={1.5} />
+          <line x1={SYNTHASE.x - 12} y1={SYNTHASE.y + 12} x2={SYNTHASE.x - 5} y2={SYNTHASE.y + 5}
+            stroke={C.hplus} strokeWidth={1.5} markerEnd="url(#cr-arr-h)" />
+          <text x={SYNTHASE.x + 14} y={SYNTHASE.y - 4} fontSize={7.5} fontWeight={700} fill={C.atp}>ATP synthase</text>
         </g>
       )}
 
-      {/* ── H⁺ dots in intermembrane space ── */}
+      {/* ── H⁺ gradient in the intermembrane space ── */}
       {s.hplusOp > 0.01 && HPLUS_POS.map((pos, i) => (
-        <g key={i} opacity={s.hplusOp * (0.75 + 0.25 * (i % 2))}>
+        <g key={i} opacity={s.hplusOp}>
           <circle cx={pos.x} cy={pos.y} r={8}
             fill={C.hplus} fillOpacity={0.18} stroke={C.hplus} strokeWidth={1} />
-          <text x={pos.x} y={pos.y + 4} textAnchor="middle" fontSize={8} fontWeight={800}
+          <text x={pos.x} y={pos.y + 3} textAnchor="middle" fontSize={8} fontWeight={800}
             fill={C.hplus} fontFamily="system-ui" pointerEvents="none">H⁺</text>
         </g>
       ))}
-
-      {/* ── Glycolysis label when active ── */}
-      {s.cytoHL > 0.4 && (
-        <text x={68} y={185} fontSize={11} fontWeight={800} fill={C.cell}
-          fontFamily="system-ui" opacity={Math.min(s.cytoHL, 1)}>Glycolysis</text>
-      )}
-
-      {/* ── Krebs "Matrix" label when not showing cycle ── */}
-      {s.matrixHL > 0.4 && s.krebsOp < 0.5 && (
-        <text x={CX} y={CY + 5} textAnchor="middle" fontSize={10} fontWeight={700}
-          fill={C.mito} fontFamily="system-ui">Matrix</text>
-      )}
-
-      {/* ── Inner membrane label during ETC ── */}
-      {s.membHL > 0.4 && (
-        <text x={CX} y={75} textAnchor="middle" fontSize={9} fontWeight={700}
-          fill={C.inner} fontFamily="system-ui" opacity={s.membHL}>
-          Inner Membrane (Cristae)
-        </text>
-      )}
 
       {/* ── Running totals strip at bottom ── */}
       <rect x={0} y={252} width={400} height={28} fill="white" fillOpacity={0.92} />
@@ -676,11 +609,36 @@ export function CellularRespirationAnimation() {
 }
 
 // ─── Emblem (lesson card thumbnail) ──────────────────────────────────────────
-// Shows the Krebs Cycle stage of the interpolated diagram.
+// A mitochondrion (folded cristae inside) releasing ATP.
 export function CellularRespirationEmblem({ className }: { className?: string }) {
   return (
-    <div className={className ?? "w-full h-full"}>
-      <InterpolatedDiagram progress={2} viewBox="60 40 280 220" />
-    </div>
+    <svg viewBox="0 -2 120 106" className={className} aria-hidden="true">
+      <g transform="rotate(-18 56 46)">
+        {/* Outer membrane */}
+        <rect x={8} y={20} width={96} height={52} rx={26} fill="#fef3c7" stroke={C.mito} strokeWidth={3} />
+        {/* Inner membrane + matrix */}
+        <rect x={16} y={27} width={80} height={38} rx={19} fill="#fde68a" stroke={C.inner} strokeWidth={2} />
+        {/* Cristae — folds of the inner membrane reaching into the matrix */}
+        <g stroke={C.inner} strokeWidth={2.5} strokeLinecap="round">
+          {[30, 50, 70].map((x) => (
+            <line key={`t${x}`} x1={x} y1={28} x2={x} y2={46} />
+          ))}
+          {[40, 60, 80].map((x) => (
+            <line key={`b${x}`} x1={x} y1={64} x2={x} y2={46} />
+          ))}
+        </g>
+      </g>
+
+      {/* ATP released */}
+      {([[100, 14, 9], [111, 34, 7], [86, 5, 5.5]] as const).map(([cx, cy, r]) => (
+        <g key={cx}>
+          <circle cx={cx} cy={cy} r={r} fill={C.atp} />
+          {r > 6 && (
+            <text x={cx} y={cy + r * 0.3} textAnchor="middle" fontSize={r * 0.72} fontWeight={800}
+              fill="white" fontFamily="system-ui">ATP</text>
+          )}
+        </g>
+      ))}
+    </svg>
   );
 }

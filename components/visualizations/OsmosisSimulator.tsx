@@ -901,52 +901,56 @@ export function OsmosisInfoPanel() {
 // with a net-flow arrow showing water crossing the membrane toward the hypertonic side.
 
 export function OsmosisEmblem({ className }: { className?: string }) {
+  // A tank split by a semipermeable membrane. Water crosses toward the side with
+  // more solute, so the water level rises on that side.
   const WATER    = "#3b82f6";
   const SOLUTE   = "#f97316";
   const MEMBRANE = "#7c3aed";
+  const LEFT_LEVEL = 27, RIGHT_LEVEL = 15, FLOOR = 61;
 
   return (
-    <div className={className ?? "w-full h-full"}>
-      <svg viewBox="0 0 120 90" className="w-full h-full" aria-hidden="true">
-        {/* Chamber backgrounds */}
-        <rect x={0}  y={0} width={60}  height={90} fill="#eff6ff" rx={0} />
-        <rect x={60} y={0} width={60}  height={90} fill="#fff7ed" rx={0} />
-        <rect x={0}  y={0} width={120} height={90} fill="none"    rx={10}
-          stroke="#e2e8f0" strokeWidth={1} />
+    <svg viewBox="0 -2 120 106" className={className} aria-hidden="true">
+      <defs>
+        <marker id="oe-arr" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L0,8 L8,4 z" fill={WATER} />
+        </marker>
+        <marker id="oe-arr-up" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" refX="4.5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 z" fill="#64748b" />
+        </marker>
+      </defs>
 
-        {/* Semipermeable membrane */}
-        <line x1={60} y1={0} x2={60} y2={90}
-          stroke={MEMBRANE} strokeWidth={2.5} strokeDasharray="6 4" opacity={0.65} />
+      {/* Water on each side — higher on the solute-rich right */}
+      <rect x={10} y={LEFT_LEVEL} width={49} height={FLOOR - LEFT_LEVEL} fill="#dbeafe" />
+      <rect x={61} y={RIGHT_LEVEL} width={49} height={FLOOR - RIGHT_LEVEL} fill="#dbeafe" />
+      <g stroke={WATER} strokeWidth={1.5} opacity={0.6}>
+        <line x1={10} y1={LEFT_LEVEL} x2={59} y2={LEFT_LEVEL} />
+        <line x1={61} y1={RIGHT_LEVEL} x2={110} y2={RIGHT_LEVEL} />
+      </g>
+      {/* Where the right side started, and how far it rose */}
+      <line x1={61} y1={LEFT_LEVEL} x2={110} y2={LEFT_LEVEL} stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 2" />
+      <line x1={104} y1={LEFT_LEVEL - 1} x2={104} y2={RIGHT_LEVEL + 3} stroke="#64748b" strokeWidth={1.4} markerEnd="url(#oe-arr-up)" />
 
-        {/* Left side — low solute, high water */}
-        <circle cx={14} cy={18} r={7} fill={WATER} fillOpacity={0.85} />
-        <circle cx={38} cy={12} r={7} fill={WATER} fillOpacity={0.85} />
-        <circle cx={22} cy={40} r={7} fill={WATER} fillOpacity={0.85} />
-        <circle cx={46} cy={48} r={7} fill={WATER} fillOpacity={0.85} />
-        <circle cx={12} cy={66} r={7} fill={WATER} fillOpacity={0.85} />
-        <circle cx={40} cy={74} r={7} fill={WATER} fillOpacity={0.85} />
-        {/* One solute on left */}
-        <circle cx={26} cy={26} r={8} fill={SOLUTE} fillOpacity={0.85} />
+      {/* Tank walls */}
+      <path d={`M 9 4 V ${FLOOR - 3} Q 9 ${FLOOR + 1} 13 ${FLOOR + 1} H 107 Q 111 ${FLOOR + 1} 111 ${FLOOR - 3} V 4`}
+        fill="none" stroke="#94a3b8" strokeWidth={2} strokeLinejoin="round" />
 
-        {/* Right side — high solute, low water */}
-        <circle cx={78}  cy={16} r={8} fill={SOLUTE} fillOpacity={0.85} />
-        <circle cx={104} cy={10} r={8} fill={SOLUTE} fillOpacity={0.85} />
-        <circle cx={90}  cy={38} r={8} fill={SOLUTE} fillOpacity={0.85} />
-        <circle cx={72}  cy={58} r={8} fill={SOLUTE} fillOpacity={0.85} />
-        <circle cx={108} cy={54} r={8} fill={SOLUTE} fillOpacity={0.85} />
-        <circle cx={86}  cy={76} r={8} fill={SOLUTE} fillOpacity={0.85} />
-        {/* One water on right */}
-        <circle cx={102} cy={72} r={7} fill={WATER} fillOpacity={0.85} />
+      {/* Semipermeable membrane */}
+      <line x1={60} y1={8} x2={60} y2={FLOOR} stroke={MEMBRANE} strokeWidth={2.5} strokeDasharray="5 3" />
 
-        {/* Net-flow arrow — water moves left → right toward high solute */}
-        <defs>
-          <marker id="oe-arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-            <path d="M0,0 L0,7 L7,3.5 z" fill={WATER} />
-          </marker>
-        </defs>
-        <line x1={46} y1={45} x2={70} y2={45}
-          stroke={WATER} strokeWidth={3} markerEnd="url(#oe-arr)" />
-      </svg>
-    </div>
+      {/* Left: mostly water */}
+      <g fill={WATER} fillOpacity={0.85}>
+        {[[18, 36], [34, 33], [48, 51], [22, 53], [36, 45]].map(([x, y]) => <circle key={`${x}${y}`} cx={x} cy={y} r={3} />)}
+      </g>
+      <circle cx={45} cy={35} r={5} fill={SOLUTE} fillOpacity={0.9} />
+
+      {/* Right: crowded with solute */}
+      <g fill={SOLUTE} fillOpacity={0.9}>
+        {[[72, 26], [90, 22], [82, 38], [98, 42], [74, 53], [94, 54]].map(([x, y]) => <circle key={`${x}${y}`} cx={x} cy={y} r={5} />)}
+      </g>
+      <circle cx={84} cy={50} r={3} fill={WATER} fillOpacity={0.85} />
+
+      {/* Net water movement */}
+      <line x1={48} y1={42} x2={71} y2={42} stroke={WATER} strokeWidth={3} markerEnd="url(#oe-arr)" />
+    </svg>
   );
 }

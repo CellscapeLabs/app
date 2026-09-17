@@ -859,16 +859,48 @@ export function PlantCellComparison() {
 // ─── Emblem (lesson card thumbnail) ──────────────────────────────────────────
 
 export function OrganelleEmblem({ className }: { className?: string }) {
+  // A simplified animal cell: nucleus wrapped in rough ER, a mitochondrion,
+  // a Golgi stack, a lysosome and a peroxisome.
+  const erArc = (r: number) => {
+    const pt = (deg: number) => {
+      const a = (deg * Math.PI) / 180;
+      return `${(48 + r * Math.cos(a)).toFixed(1)},${(32 + r * Math.sin(a)).toFixed(1)}`;
+    };
+    return `M ${pt(115)} A ${r},${r} 0 0,1 ${pt(235)}`;
+  };
   return (
-    <div className={className ?? "w-full h-full"}>
-      <svg viewBox="148 142 204 204" className="w-full h-full" aria-hidden="true">
-        <circle cx="240" cy="240" r="208"
-          fill="rgba(236,253,245,0.4)" stroke={C.membrane} strokeWidth="2.5" strokeDasharray="14 6" />
-        <circle cx="240" cy="240" r="88" fill={`${C.nucleus}22`} />
-        <NucleusGroup cx={240} cy={240} r={82} />
-        <MitochondrionGroup cx={348} cy={162} rx={36} ry={17} angle={-28} />
-        <GolgiGroup cx={295} cy={330} />
-      </svg>
-    </div>
+    <svg viewBox="0 -2 120 106" className={className} aria-hidden="true">
+      <ellipse cx={60} cy={32} rx={53} ry={31} fill="#ecfdf5" stroke={C.membrane} strokeWidth={2.5} />
+
+      {/* Rough ER hugging the nucleus */}
+      <g fill="none" stroke={C.er} strokeWidth={1.8} strokeLinecap="round" opacity={0.8}>
+        <path d={erArc(19)} />
+        <path d={erArc(24)} />
+      </g>
+
+      {/* Nucleus + nucleolus */}
+      <circle cx={48} cy={32} r={14} fill={`${C.nucleus}2e`} stroke={C.nucleus} strokeWidth={2} />
+      <circle cx={51} cy={30} r={5} fill={C.nucleolus} />
+
+      {/* Mitochondrion */}
+      <g transform="rotate(-20 88 19)">
+        <rect x={75} y={13} width={26} height={12} rx={6} fill="#ffedd5" stroke={C.mito} strokeWidth={1.8} />
+        <g stroke={C.mito} strokeWidth={1.4} strokeLinecap="round">
+          <line x1={82} y1={14.5} x2={82} y2={20} />
+          <line x1={88} y1={23.5} x2={88} y2={18} />
+          <line x1={94} y1={14.5} x2={94} y2={20} />
+        </g>
+      </g>
+
+      {/* Golgi apparatus */}
+      <g fill="none" stroke={C.golgi} strokeWidth={2.6} strokeLinecap="round">
+        {[0, 5, 10].map((dy) => (
+          <path key={dy} d={`M ${76 + dy / 2.5} ${37 + dy} Q 87 ${31 + dy}, ${98 - dy / 2.5} ${37 + dy}`} />
+        ))}
+      </g>
+
+      <circle cx={67} cy={53} r={3.5} fill={C.lysosome} />
+      <circle cx={66} cy={10} r={3} fill={C.peroxisome} />
+    </svg>
   );
 }

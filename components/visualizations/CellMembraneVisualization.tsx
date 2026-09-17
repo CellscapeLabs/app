@@ -777,56 +777,50 @@ export function CellMembranePanel() {
 // Static phospholipid bilayer cross-section for the lesson card thumbnail.
 
 export function CellMembraneEmblem({ className }: { className?: string }) {
-  const HEAD  = "#7c3aed";
-  const TAIL  = "#db2777";
-  const PROT  = "#1d9e75";
-  const WATER = "#3b82f6";
-
-  const leftXs  = [10, 26, 42] as const;
-  const rightXs = [78, 94, 110] as const;
-  const allXs   = [...leftXs, ...rightXs];
-
+  // A phospholipid bilayer with a channel protein letting a molecule diffuse
+  // from the crowded side (top) to the sparse side (bottom).
+  const lipidXs = [8, 19, 30, 41, 79, 90, 101, 112];
+  const TOP = 17, BOT = 45, MID = 31;
   return (
-    <div className={className ?? "w-full h-full"}>
-      <svg viewBox="0 0 120 90" className="w-full h-full" aria-hidden="true">
-        <rect width={120} height={90} fill="#f5f3ff" rx={10} />
+    <svg viewBox="0 -2 120 106" className={className} aria-hidden="true">
+      <defs>
+        <marker id="cm-emb-arr" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <path d="M0,0 L0,7 L7,3.5 z" fill={C.potassium} />
+        </marker>
+      </defs>
 
-        {/* Channel protein — behind phospholipids so heads render in front */}
-        <rect x={52} y={8} width={16} height={74} rx={8}
-          fill={PROT} fillOpacity={0.8} />
-        <ellipse cx={60} cy={45} rx={4} ry={5} fill="white" fillOpacity={0.55} />
-
-        {/* Hydrophobic tails — top leaflet angles down, bottom angles up */}
-        {allXs.map((x, i) => (
-          <g key={`t${i}`}>
-            <line x1={x - 2.5} y1={28} x2={x - 1.5} y2={43}
-              stroke={TAIL} strokeWidth={1.8} strokeLinecap="round" />
-            <line x1={x + 2.5} y1={28} x2={x + 1.5} y2={43}
-              stroke={TAIL} strokeWidth={1.8} strokeLinecap="round" />
-            <line x1={x - 2.5} y1={62} x2={x - 1.5} y2={47}
-              stroke={TAIL} strokeWidth={1.8} strokeLinecap="round" />
-            <line x1={x + 2.5} y1={62} x2={x + 1.5} y2={47}
-              stroke={TAIL} strokeWidth={1.8} strokeLinecap="round" />
+      {/* Fatty-acid tails */}
+      <g stroke={C.tailHydro} strokeWidth={1.8} strokeLinecap="round">
+        {lipidXs.map((x) => (
+          <g key={x}>
+            <line x1={x - 1.8} y1={TOP + 4} x2={x - 1.8} y2={MID - 1.5} />
+            <line x1={x + 1.8} y1={TOP + 4} x2={x + 1.8} y2={MID - 1.5} />
+            <line x1={x - 1.8} y1={BOT - 4} x2={x - 1.8} y2={MID + 1.5} />
+            <line x1={x + 1.8} y1={BOT - 4} x2={x + 1.8} y2={MID + 1.5} />
           </g>
         ))}
-
-        {/* Polar heads — top row */}
-        {allXs.map((x, i) => (
-          <circle key={`th${i}`} cx={x} cy={22} r={7.5} fill={HEAD} />
+      </g>
+      {/* Phosphate heads */}
+      <g fill={C.headHydro}>
+        {lipidXs.map((x) => (
+          <g key={x}>
+            <circle cx={x} cy={TOP} r={4.6} />
+            <circle cx={x} cy={BOT} r={4.6} />
+          </g>
         ))}
-        {/* Polar heads — bottom row */}
-        {allXs.map((x, i) => (
-          <circle key={`bh${i}`} cx={x} cy={68} r={7.5} fill={HEAD} />
-        ))}
+      </g>
 
-        {/* Water molecules above and below */}
-        <circle cx={20}  cy={6}  r={4} fill={WATER} fillOpacity={0.75} />
-        <circle cx={60}  cy={4}  r={4} fill={WATER} fillOpacity={0.75} />
-        <circle cx={100} cy={7}  r={4} fill={WATER} fillOpacity={0.75} />
-        <circle cx={20}  cy={84} r={4} fill={WATER} fillOpacity={0.75} />
-        <circle cx={60}  cy={86} r={4} fill={WATER} fillOpacity={0.75} />
-        <circle cx={100} cy={83} r={4} fill={WATER} fillOpacity={0.75} />
-      </svg>
-    </div>
+      {/* Channel protein — two subunits around an open pore */}
+      <rect x={48} y={8} width={9} height={46} rx={4.5} fill={C.channel} />
+      <rect x={63} y={8} width={9} height={46} rx={4.5} fill={C.channel} />
+
+      {/* Molecules: many outside, few inside, one passing through the pore */}
+      <g fill={C.potassium}>
+        {[[14, 3], [34, 5], [86, 3], [106, 6], [60, 1]].map(([x, y]) => <circle key={x} cx={x} cy={y} r={3} />)}
+        <circle cx={96} cy={59} r={3} />
+        <circle cx={60} cy={22} r={3.2} />
+      </g>
+      <line x1={60} y1={30} x2={60} y2={50} stroke={C.potassium} strokeWidth={2} markerEnd="url(#cm-emb-arr)" />
+    </svg>
   );
 }

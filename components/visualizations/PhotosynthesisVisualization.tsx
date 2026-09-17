@@ -6,10 +6,11 @@
  *     flow PS II → PS I → NADPH; H⁺ gradient drives ATP synthase → ATP
  *   Stage 2 Calvin Cycle (stroma): CO₂ fixed by RuBisCO → 3-PGA → G3P (using ATP +
  *     NADPH from stage 1); G3P regenerated to RuBP; 3 turns = 1 net G3P
- * Interactions: Drag right to advance through 8 stages, left to go back. Chloroplast
- *   cutaway keeps thylakoid (left) and stroma (right) always visible so the spatial
- *   separation stays clear. ATP and NADPH visually cross from thylakoid to stroma at
- *   stage 7 — the coupling handoff. A CO₂ molecule is tracked through the Calvin cycle.
+ * Interactions: Drag right to advance through 8 stages, left to go back (or ← → keys /
+ *   stage tabs). Chloroplast cutaway keeps the thylakoid sac (left) and the Calvin cycle
+ *   ring (right) always visible so the spatial separation stays clear; dashed rings mark
+ *   the structure working in each stage. At stage 7 arrows carry ATP and NADPH across to
+ *   the reduction step — the coupling handoff. A CO₂ molecule is tracked into RuBisCO.
  */
 
 import { useState, useRef, useEffect, createContext, useContext } from "react";
@@ -20,6 +21,7 @@ import {
   type AnimationPlaybackControls,
 } from "framer-motion";
 import type React from "react";
+import { lerp, fadeLerp, q } from "@/lib/scrub";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -42,38 +44,37 @@ const C = {
   rup:         "#84cc16",   // lime-500 — RuBP
 };
 
-// ─── Lerp helpers ─────────────────────────────────────────────────────────────
-function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
-
 // ─── Interpolated state ───────────────────────────────────────────────────────
+// Structures (photosystems, ATP synthase, RuBisCO, cycle intermediates) are always
+// drawn at full strength; stages switch processes and molecules fully on or off,
+// and emphasis rings show which structure is working.
 interface PSState {
-  // Region highlights (0=off, 1=full)
+  // Region highlights (0=off, 1=full) — fills, blended linearly
   thylakoidHL: number;
   stromaHL:    number;
 
-  // Light reactions visibility
-  ps2Op:       number;
-  ps1Op:       number;
-  atpSynOp:    number;
-  waterOp:     number;
-  o2Op:        number;
-  electronOp:  number;  // e⁻ flow path opacity
+  // Light reactions
+  photon1Op:   number;  // light hitting PS II
+  photon2Op:   number;  // light hitting PS I
+  waterOp:     number;  // H₂O split → O₂
+  electronOp:  number;  // e⁻ flow PS II → PS I
   hplusOp:     number;  // H⁺ ions in lumen
   nadphOp:     number;  // NADPH produced
+  atpOp:       number;  // ATP produced
+  synthFlowOp: number;  // H⁺ flowing through ATP synthase
+  ps2Emph:     number;
+  ps1Emph:     number;
+  synthEmph:   number;
 
-  // ATP produced (light reactions)
-  atpLRCount:  number;
-
-  // Calvin cycle visibility
-  rubiscoOp:   number;
-  pgaOp:       number;
-  g3pOp:       number;
-  rupOp:       number;
-  turnCount:   number;  // 0–3 turns of the cycle
-
-  // Handoff — ATP/NADPH crossing from thylakoid to stroma (0=left, 1=right)
-  handoffX:    number;
-  handoffOp:   number;
+  // Calvin cycle
+  rubiscoEmph: number;
+  fixArcOp:    number;  // RuBP + CO₂ → 3-PGA
+  redArcOp:    number;  // 3-PGA → G3P
+  regenArcOp:  number;  // G3P → RuBP
+  outputOp:    number;  // G3P → glucose
+  handoffOp:   number;  // ATP + NADPH carried to the Calvin cycle
+  turnOp:      number;
+  turnCount:   number;
 
   // CO₂ molecule tracker
   co2X:        number;
@@ -81,111 +82,79 @@ interface PSState {
   co2Op:       number;
 }
 
+const LINEAR_KEYS = new Set<keyof PSState>(["thylakoidHL", "stromaHL", "turnCount", "co2X", "co2Y"]);
+
 function lerpState(a: PSState, b: PSState, t: number): PSState {
-  return {
-    thylakoidHL: lerp(a.thylakoidHL, b.thylakoidHL, t),
-    stromaHL:    lerp(a.stromaHL,    b.stromaHL,    t),
-    ps2Op:       lerp(a.ps2Op,       b.ps2Op,       t),
-    ps1Op:       lerp(a.ps1Op,       b.ps1Op,       t),
-    atpSynOp:    lerp(a.atpSynOp,   b.atpSynOp,    t),
-    waterOp:     lerp(a.waterOp,     b.waterOp,     t),
-    o2Op:        lerp(a.o2Op,        b.o2Op,        t),
-    electronOp:  lerp(a.electronOp,  b.electronOp,  t),
-    hplusOp:     lerp(a.hplusOp,    b.hplusOp,     t),
-    nadphOp:     lerp(a.nadphOp,    b.nadphOp,     t),
-    atpLRCount:  lerp(a.atpLRCount,  b.atpLRCount,  t),
-    rubiscoOp:   lerp(a.rubiscoOp,   b.rubiscoOp,   t),
-    pgaOp:       lerp(a.pgaOp,       b.pgaOp,       t),
-    g3pOp:       lerp(a.g3pOp,       b.g3pOp,       t),
-    rupOp:       lerp(a.rupOp,       b.rupOp,       t),
-    turnCount:   lerp(a.turnCount,   b.turnCount,   t),
-    handoffX:    lerp(a.handoffX,    b.handoffX,    t),
-    handoffOp:   lerp(a.handoffOp,  b.handoffOp,   t),
-    co2X:        lerp(a.co2X,        b.co2X,        t),
-    co2Y:        lerp(a.co2Y,        b.co2Y,        t),
-    co2Op:       lerp(a.co2Op,       b.co2Op,       t),
-  };
+  const out = { ...a };
+  (Object.keys(a) as (keyof PSState)[]).forEach((k) => {
+    out[k] = LINEAR_KEYS.has(k) ? lerp(a[k], b[k], t) : fadeLerp(a[k], b[k], t);
+  });
+  return out;
 }
 
+// ─── Geometry ─────────────────────────────────────────────────────────────────
+// viewBox 0 0 500 300. Chloroplast is a rounded oblong (y 48–274) so section titles
+// sit in clear space above it. Left half: thylakoid sac. Right half: Calvin cycle.
+const TX1 = 36, TX2 = 236;       // thylakoid sac x span
+const TY1 = 132, TY2 = 156;      // membrane band (stroma side on top)
+const LY2 = 204;                 // bottom of lumen
+const PS2X = 78, PS1X = 158, ATSX = 212;
+
+const CYC_X = 366, CYC_Y = 158, CYC_R = 60;
+const RUBISCO = { x: CYC_X,         y: CYC_Y - CYC_R };
+const PGA     = { x: CYC_X - CYC_R, y: CYC_Y };
+const G3P     = { x: CYC_X,         y: CYC_Y + CYC_R };
+const RUBP    = { x: CYC_X + CYC_R, y: CYC_Y };
+const CO2_WAIT  = { x: 452, y: 74 };
+const CO2_FIXED = { x: 420, y: 76 };
+
+// Counter-clockwise arc along the cycle ring, from one angle (degrees, SVG coords) to a smaller one
+function cycleArc(fromDeg: number, toDeg: number) {
+  const pt = (d: number) => {
+    const a = (d * Math.PI) / 180;
+    return `${q(CYC_X + CYC_R * Math.cos(a))},${q(CYC_Y + CYC_R * Math.sin(a))}`;
+  };
+  return `M ${pt(fromDeg)} A ${CYC_R},${CYC_R} 0 0,0 ${pt(toDeg)}`;
+}
+const ARC_FIX   = cycleArc(-120, -160);   // RuBisCO → 3-PGA
+const ARC_RED   = cycleArc(160, 112);     // 3-PGA → G3P
+const ARC_REGEN = cycleArc(68, 20);       // G3P → RuBP
+const ARC_ENTER = cycleArc(-20, -60);     // RuBP → RuBisCO
+
+const HPLUS_POS = [
+  { x: 114, y: 174 }, { x: 136, y: 191 }, { x: 158, y: 174 }, { x: 180, y: 191 },
+] as const;
+
 // ─── Keyframes (8 stages) ────────────────────────────────────────────────────
-// SVG viewBox: 0 0 500 300
-// Chloroplast ellipse: cx=250 cy=150 rx=230 ry=130
-// Thylakoid membrane: horizontal band, y=130–170, left half (x=30–250)
-// Stroma: right half + above/below thylakoid on left (x=250–470)
-// Dividing line at x=250 (center)
+const OFF: PSState = {
+  thylakoidHL: 0, stromaHL: 0,
+  photon1Op: 0, photon2Op: 0, waterOp: 0, electronOp: 0, hplusOp: 0, nadphOp: 0, atpOp: 0, synthFlowOp: 0,
+  ps2Emph: 0, ps1Emph: 0, synthEmph: 0,
+  rubiscoEmph: 0, fixArcOp: 0, redArcOp: 0, regenArcOp: 0, outputOp: 0, handoffOp: 0, turnOp: 0, turnCount: 0,
+  co2X: CO2_WAIT.x, co2Y: CO2_WAIT.y, co2Op: 1,
+};
 
 const KF: PSState[] = [
-  // 0 — Chloroplast overview (everything quiet)
-  { thylakoidHL:0,    stromaHL:0,
-    ps2Op:0.3,        ps1Op:0.3,        atpSynOp:0.3,
-    waterOp:0.3,      o2Op:0,           electronOp:0,     hplusOp:0,   nadphOp:0,
-    atpLRCount:0,
-    rubiscoOp:0.3,    pgaOp:0,          g3pOp:0,          rupOp:0.3,   turnCount:0,
-    handoffX:0,       handoffOp:0,
-    co2X:60,          co2Y:60,          co2Op:0.6 },
-
-  // 1 — Light absorption + water splitting (PS II activated)
-  { thylakoidHL:0.8,  stromaHL:0,
-    ps2Op:1,          ps1Op:0.3,        atpSynOp:0.3,
-    waterOp:1,        o2Op:1,           electronOp:0,     hplusOp:0.4, nadphOp:0,
-    atpLRCount:0,
-    rubiscoOp:0.2,    pgaOp:0,          g3pOp:0,          rupOp:0.2,   turnCount:0,
-    handoffX:0,       handoffOp:0,
-    co2X:60,          co2Y:60,          co2Op:0.6 },
-
-  // 2 — Electron transport chain (PS II → plastoquinone → cyt b6f → plastocyanin)
-  { thylakoidHL:1,    stromaHL:0,
-    ps2Op:1,          ps1Op:0.6,        atpSynOp:0.4,
-    waterOp:0.8,      o2Op:0.8,         electronOp:1,     hplusOp:0.8, nadphOp:0,
-    atpLRCount:0,
-    rubiscoOp:0.2,    pgaOp:0,          g3pOp:0,          rupOp:0.2,   turnCount:0,
-    handoffX:0,       handoffOp:0,
-    co2X:60,          co2Y:60,          co2Op:0.6 },
-
-  // 3 — PS I + NADPH production
-  { thylakoidHL:0.9,  stromaHL:0.2,
-    ps2Op:0.7,        ps1Op:1,          atpSynOp:0.5,
-    waterOp:0.6,      o2Op:0.6,         electronOp:0.8,   hplusOp:1,   nadphOp:1,
-    atpLRCount:0,
-    rubiscoOp:0.2,    pgaOp:0,          g3pOp:0,          rupOp:0.2,   turnCount:0,
-    handoffX:0,       handoffOp:0,
-    co2X:60,          co2Y:60,          co2Op:0.6 },
-
-  // 4 — Chemiosmosis → ATP (ATP synthase spins)
-  { thylakoidHL:0.7,  stromaHL:0.3,
-    ps2Op:0.5,        ps1Op:0.7,        atpSynOp:1,
-    waterOp:0.5,      o2Op:0.5,         electronOp:0.5,   hplusOp:0.6, nadphOp:1,
-    atpLRCount:3,
-    rubiscoOp:0.2,    pgaOp:0,          g3pOp:0,          rupOp:0.2,   turnCount:0,
-    handoffX:0,       handoffOp:0,
-    co2X:60,          co2Y:60,          co2Op:0.6 },
-
-  // 5 — Calvin cycle opens (CO₂ enters, RuBisCO fixes it)
-  { thylakoidHL:0.3,  stromaHL:0.9,
-    ps2Op:0.3,        ps1Op:0.3,        atpSynOp:0.5,
-    waterOp:0.3,      o2Op:0.3,         electronOp:0.2,   hplusOp:0.3, nadphOp:0.7,
-    atpLRCount:3,
-    rubiscoOp:1,      pgaOp:0.5,        g3pOp:0,          rupOp:0.6,   turnCount:1,
-    handoffX:0,       handoffOp:0,
-    co2X:290,         co2Y:110,         co2Op:1 },
-
-  // 6 — Reduction: 3-PGA + ATP + NADPH → G3P (handoff moment)
-  { thylakoidHL:0.2,  stromaHL:1,
-    ps2Op:0.2,        ps1Op:0.2,        atpSynOp:0.4,
-    waterOp:0.2,      o2Op:0.2,         electronOp:0.1,   hplusOp:0.2, nadphOp:0.4,
-    atpLRCount:3,
-    rubiscoOp:0.8,    pgaOp:1,          g3pOp:0.8,        rupOp:0.5,   turnCount:2,
-    handoffX:1,       handoffOp:1,
-    co2X:340,         co2Y:150,         co2Op:1 },
-
-  // 7 — Regeneration + output (G3P exits, RuBP regenerated, 3 turns done)
-  { thylakoidHL:0.15, stromaHL:0.8,
-    ps2Op:0.2,        ps1Op:0.2,        atpSynOp:0.3,
-    waterOp:0.2,      o2Op:0.2,         electronOp:0.1,   hplusOp:0.2, nadphOp:0.3,
-    atpLRCount:3,
-    rubiscoOp:0.6,    pgaOp:0.6,        g3pOp:1,          rupOp:1,     turnCount:3,
-    handoffX:1,       handoffOp:0.5,
-    co2X:400,         co2Y:200,         co2Op:0.8 },
+  // 0 — Chloroplast overview
+  OFF,
+  // 1 — Light absorption + water splitting (PS II)
+  { ...OFF, thylakoidHL: 0.8, photon1Op: 1, waterOp: 1, ps2Emph: 1 },
+  // 2 — Electron transport chain PS II → PS I, H⁺ pumped into lumen
+  { ...OFF, thylakoidHL: 1, photon1Op: 1, waterOp: 1, electronOp: 1, hplusOp: 1 },
+  // 3 — PS I + NADPH
+  { ...OFF, thylakoidHL: 1, photon1Op: 1, photon2Op: 1, waterOp: 1, electronOp: 1, hplusOp: 1, nadphOp: 1, ps1Emph: 1 },
+  // 4 — Chemiosmosis → ATP
+  { ...OFF, thylakoidHL: 1, photon1Op: 1, photon2Op: 1, waterOp: 1, electronOp: 1, hplusOp: 1, nadphOp: 1,
+    atpOp: 1, synthFlowOp: 1, synthEmph: 1 },
+  // 5 — Carbon fixation: CO₂ reaches RuBisCO
+  { ...OFF, thylakoidHL: 0.2, stromaHL: 1, nadphOp: 1, atpOp: 1,
+    rubiscoEmph: 1, fixArcOp: 1, turnOp: 1, turnCount: 1, co2X: CO2_FIXED.x, co2Y: CO2_FIXED.y },
+  // 6 — Reduction: ATP + NADPH handed off, 3-PGA → G3P
+  { ...OFF, thylakoidHL: 0.2, stromaHL: 1, nadphOp: 1, atpOp: 1,
+    redArcOp: 1, handoffOp: 1, turnOp: 1, turnCount: 2, co2X: CO2_FIXED.x, co2Y: CO2_FIXED.y, co2Op: 0 },
+  // 7 — Regeneration + output
+  { ...OFF, thylakoidHL: 0.2, stromaHL: 1, nadphOp: 1, atpOp: 1,
+    regenArcOp: 1, outputOp: 1, turnOp: 1, turnCount: 3, co2X: CO2_FIXED.x, co2Y: CO2_FIXED.y, co2Op: 0 },
 ];
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -282,276 +251,201 @@ const STAGES = [
   },
 ] as const;
 
-// ─── H⁺ positions in thylakoid lumen ─────────────────────────────────────────
-const HPLUS_POS = [
-  { x: 62,  y: 188 },
-  { x: 90,  y: 194 },
-  { x: 120, y: 198 },
-  { x: 152, y: 194 },
-  { x: 184, y: 190 },
-  { x: 214, y: 196 },
-] as const;
+// ─── Small pieces ─────────────────────────────────────────────────────────────
+function EmphasisRing({ x, y, w, h, op, color }: { x: number; y: number; w: number; h: number; op: number; color: string }) {
+  if (op < 0.01) return null;
+  return (
+    <rect x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={7}
+      fill="none" stroke={color} strokeWidth={2} strokeDasharray="4 2" opacity={op} />
+  );
+}
+
+function Photon({ x, y, op }: { x: number; y: number; op: number }) {
+  if (op < 0.01) return null;
+  return (
+    <g opacity={op}>
+      <path d={`M ${x} ${y} l 6 7 l -4 6 l 8 7 l -4 6 l 8 8`}
+        fill="none" stroke="#eab308" strokeWidth={2} strokeLinejoin="round" markerEnd="url(#ps-arr-light)" />
+      <text x={x + 10} y={y + 2} fontSize={7} fontWeight={700} fill="#a16207" fontFamily="system-ui">light</text>
+    </g>
+  );
+}
 
 // ─── Full chloroplast cutaway diagram ─────────────────────────────────────────
 function InterpolatedDiagram({ progress }: { progress: number }) {
   const clamped = Math.max(0, Math.min(progress, KF.length - 1));
   const fi = Math.min(Math.floor(clamped), KF.length - 2);
-  const t  = clamped - fi;
-  const s  = lerpState(KF[fi], KF[Math.min(fi + 1, KF.length - 1)], t);
-
-  // Layout constants
-  const CX = 250, CY = 152;          // chloroplast center
-  const TY1 = 145, TY2 = 170;        // thylakoid membrane band top/bottom
-  const LY2 = 215;                    // bottom of lumen region
-  const TX1 = 38,  TX2 = 242;        // thylakoid x span (left half)
-
-  // Protein centers (embedded in membrane)
-  const PS2X = 84;
-  const PS1X = 175;
-  const ATSX = 222;
-
-  // Stroma (right half) element positions
-  const RUBX = 335, RUBY = 118;
-  const PGAX = 385, PGAY = 168;
-  const G3PX = 420, G3PY = 210;
-  const RUPX = 295, RUPY = 215;
+  const s  = lerpState(KF[fi], KF[fi + 1], clamped - fi);
 
   return (
     <svg viewBox="0 0 500 300" className="w-full h-full" aria-label="Photosynthesis diagram">
       <defs>
-        <clipPath id="ps-outer">
-          <ellipse cx={CX} cy={CY} rx={226} ry={128} />
-        </clipPath>
-        <clipPath id="ps-lumen">
-          <rect x={TX1} y={TY2} width={TX2 - TX1} height={LY2 - TY2} />
-        </clipPath>
-        <marker id="ps-arr-e" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-          <path d="M0,0 L0,7 L7,3.5 z" fill={C.electron} />
-        </marker>
-        <marker id="ps-arr-atp" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-          <path d="M0,0 L0,7 L7,3.5 z" fill={C.atp} />
-        </marker>
-        <marker id="ps-arr-nadph" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-          <path d="M0,0 L0,7 L7,3.5 z" fill={C.nadph} />
-        </marker>
-        <marker id="ps-arr-mol" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L6,3 z" fill={C.rubisco} />
-        </marker>
-        <marker id="ps-arr-g3p" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L6,3 z" fill={C.g3p} />
-        </marker>
+        {([
+          ["ps-arr-e", C.electron], ["ps-arr-atp", C.atp], ["ps-arr-nadph", C.nadph], ["ps-arr-light", "#eab308"],
+          ["ps-arr-h", C.hplus], ["ps-arr-cyc", "#9ca3af"], ["ps-arr-fix", C.rubisco], ["ps-arr-red", C.pga],
+          ["ps-arr-regen", C.rup], ["ps-arr-g3p", C.g3p], ["ps-arr-water", C.water],
+        ] as const).map(([id, fill]) => (
+          <marker key={id} id={id} markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L0,8 L8,4 z" fill={fill} />
+          </marker>
+        ))}
       </defs>
 
-      {/* ── Outer chloroplast envelope ── */}
-      <ellipse cx={CX} cy={CY} rx={226} ry={128} fill="#ecfdf5" stroke={C.chloroplast} strokeWidth={3} />
+      {/* ── Section titles, above the chloroplast ── */}
+      <text x={136} y={22} textAnchor="middle" fontSize={8.5} fontWeight={700}
+        fill={C.thylakoid} fontFamily="system-ui" letterSpacing="0.08em">LIGHT REACTIONS</text>
+      <text x={136} y={35} textAnchor="middle" fontSize={7} fill="#6b7280" fontFamily="system-ui">thylakoid membrane</text>
+      <text x={366} y={22} textAnchor="middle" fontSize={8.5} fontWeight={700}
+        fill={C.thylakoid} fontFamily="system-ui" letterSpacing="0.08em">CALVIN CYCLE</text>
+      <text x={366} y={35} textAnchor="middle" fontSize={7} fill="#6b7280" fontFamily="system-ui">stroma</text>
 
-      {/* ── Thylakoid lumen background (inside the thylakoid sac) ── */}
-      <ellipse cx={CX} cy={CY} rx={226} ry={128} fill="#a7f3d0" clipPath="url(#ps-lumen)" />
-
-      {/* ── Region highlight: thylakoid (light reactions active) ── */}
-      {s.thylakoidHL > 0.01 && (
-        <rect x={TX1} y={TY1} width={TX2 - TX1} height={TY2 - TY1}
-          fill={C.thylakoid} fillOpacity={s.thylakoidHL * 0.38} rx={3}
-          clipPath="url(#ps-outer)" />
-      )}
-
-      {/* ── Region highlight: stroma (Calvin cycle active) ── */}
+      {/* ── Chloroplast envelope ── */}
+      <rect x={14} y={48} width={472} height={226} rx={56} fill="#ecfdf5" stroke={C.chloroplast} strokeWidth={3} />
       {s.stromaHL > 0.01 && (
-        <ellipse cx={CX} cy={CY} rx={226} ry={128}
-          fill="#10b981" fillOpacity={s.stromaHL * 0.1} />
+        <rect x={14} y={48} width={472} height={226} rx={56} fill="#10b981" fillOpacity={s.stromaHL * 0.08} />
       )}
 
-      {/* ── Thylakoid membrane band ── */}
-      <rect x={TX1} y={TY1} width={TX2 - TX1} height={TY2 - TY1}
-        fill={C.thylakoid} fillOpacity={0.22}
-        stroke={C.thylakoid} strokeWidth={1.5} rx={3} />
+      {/* ── Divider between light reactions and Calvin cycle ── */}
+      <line x1={250} y1={56} x2={250} y2={266} stroke="#d1d5db" strokeWidth={1} strokeDasharray="4 3" opacity={0.6} />
 
-      {/* ── Divider between left (light rxns) and right (Calvin) ── */}
-      <line x1={250} y1={26} x2={250} y2={276}
-        stroke="#d1d5db" strokeWidth={1} strokeDasharray="4 3" opacity={0.5} />
+      {/* ── Thylakoid sac: membrane band on top, lumen below ── */}
+      <rect x={TX1} y={TY1} width={TX2 - TX1} height={LY2 - TY1} rx={10}
+        fill="#a7f3d0" stroke={C.thylakoid} strokeWidth={1.5} />
+      <rect x={TX1} y={TY1} width={TX2 - TX1} height={TY2 - TY1} rx={3}
+        fill={C.thylakoid} fillOpacity={0.22 + s.thylakoidHL * 0.25} />
+      <text x={136} y={216} textAnchor="middle" fontSize={7} fill={C.thylakoid} fontFamily="system-ui">thylakoid lumen</text>
 
-      {/* ── Section labels ── */}
-      <text x={130} y={37} textAnchor="middle" fontSize={8.5} fontWeight={700}
-        fill="#059669" fontFamily="system-ui" letterSpacing="0.08em">LIGHT REACTIONS</text>
-      <text x={130} y={49} textAnchor="middle" fontSize={7} fill="#6b7280" fontFamily="system-ui">thylakoid membrane</text>
-      <text x={368} y={37} textAnchor="middle" fontSize={8.5} fontWeight={700}
-        fill="#059669" fontFamily="system-ui" letterSpacing="0.08em">CALVIN CYCLE</text>
-      <text x={368} y={49} textAnchor="middle" fontSize={7} fill="#6b7280" fontFamily="system-ui">stroma</text>
-      <text x={130} y={208} textAnchor="middle" fontSize={7} fill="#059669" fontFamily="system-ui" opacity={0.6}>lumen</text>
+      {/* ── Light ── */}
+      <Photon x={40} y={70} op={s.photon1Op} />
+      <Photon x={120} y={70} op={s.photon2Op} />
 
-      {/* ── H₂O splitting below PS II ── */}
+      {/* ── PS II ── */}
+      <EmphasisRing x={PS2X - 13} y={TY1} w={26} h={TY2 - TY1} op={s.ps2Emph} color={C.ps2} />
+      <rect x={PS2X - 13} y={TY1} width={26} height={TY2 - TY1} rx={4} fill={C.ps2} fillOpacity={0.88} />
+      <text x={PS2X} y={TY1 - 17} textAnchor="middle" fontSize={8} fontWeight={700} fill={C.ps2} fontFamily="system-ui">PS II</text>
+      <text x={PS2X} y={TY1 - 8} textAnchor="middle" fontSize={6} fill={C.ps2} fontFamily="system-ui" opacity={0.75}>P680</text>
+
+      {/* ── PS I ── */}
+      <EmphasisRing x={PS1X - 13} y={TY1} w={26} h={TY2 - TY1} op={s.ps1Emph} color={C.ps1} />
+      <rect x={PS1X - 13} y={TY1} width={26} height={TY2 - TY1} rx={4} fill={C.ps1} fillOpacity={0.88} />
+      <text x={PS1X} y={TY1 - 17} textAnchor="middle" fontSize={8} fontWeight={700} fill={C.ps1} fontFamily="system-ui">PS I</text>
+      <text x={PS1X} y={TY1 - 8} textAnchor="middle" fontSize={6} fill={C.ps1} fontFamily="system-ui" opacity={0.75}>P700</text>
+
+      {/* ── ATP synthase (spans the membrane) ── */}
+      <EmphasisRing x={ATSX - 6} y={TY1 - 10} w={12} h={TY2 - TY1 + 20} op={s.synthEmph} color={C.atpSyn} />
+      <rect x={ATSX - 6} y={TY1 - 10} width={12} height={TY2 - TY1 + 20} rx={5} fill={C.atpSyn} fillOpacity={0.88} />
+      <text x={ATSX} y={227} textAnchor="middle" fontSize={7} fontWeight={700} fill={C.atpSyn} fontFamily="system-ui">ATP synthase</text>
+      <line x1={ATSX} y1={220} x2={ATSX} y2={TY2 + 14} stroke={C.atpSyn} strokeWidth={0.75} opacity={0.5} />
+
+      {/* ── Water splitting (lumen side of PS II) ── */}
       {s.waterOp > 0.01 && (
-        <g opacity={s.waterOp}>
-          <circle cx={PS2X - 4} cy={203} r={11} fill={C.water} fillOpacity={0.85} />
-          <text x={PS2X - 4} y={207} textAnchor="middle" fontSize={8} fontWeight={700}
-            fill="white" fontFamily="system-ui">H₂O</text>
-          <line x1={PS2X - 4} y1={192} x2={PS2X - 4} y2={TY2 + 2}
-            stroke={C.water} strokeWidth={1.5} strokeDasharray="3 2" opacity={0.65} />
+        <g opacity={s.waterOp} fontFamily="system-ui">
+          <circle cx={56} cy={184} r={11} fill={C.water} fillOpacity={0.9} />
+          <text x={56} y={187} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="white">H₂O</text>
+          <line x1={66} y1={176} x2={PS2X - 4} y2={TY2 + 4} stroke={C.water} strokeWidth={1.5} markerEnd="url(#ps-arr-water)" />
+          <circle cx={92} cy={188} r={10} fill={C.oxygen} fillOpacity={0.9} />
+          <text x={92} y={191} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="white">O₂</text>
+          <line x1={PS2X + 2} y1={TY2 + 4} x2={88} y2={177} stroke={C.oxygen} strokeWidth={1.5} markerEnd="url(#ps-arr-cyc)" />
         </g>
       )}
 
-      {/* ── O₂ released above PS II ── */}
-      {s.o2Op > 0.01 && (
-        <g opacity={s.o2Op}>
-          <circle cx={PS2X - 28} cy={119} r={11} fill={C.oxygen} fillOpacity={0.85} />
-          <text x={PS2X - 28} y={123} textAnchor="middle" fontSize={8} fontWeight={700}
-            fill="white" fontFamily="system-ui">O₂</text>
-          <line x1={PS2X - 8} y1={TY1 - 1} x2={PS2X - 26} y2={131}
-            stroke={C.oxygen} strokeWidth={1.5} strokeDasharray="3 2" opacity={0.5} />
-        </g>
-      )}
-
-      {/* ── PS II protein ── */}
-      <g opacity={s.ps2Op}>
-        <rect x={PS2X - 13} y={TY1} width={26} height={TY2 - TY1}
-          rx={4} fill={C.ps2} fillOpacity={0.88} />
-        <text x={PS2X} y={TY1 - 5} textAnchor="middle" fontSize={8} fontWeight={700}
-          fill={C.ps2} fontFamily="system-ui">PS II</text>
-        <text x={PS2X} y={TY1 - 14} textAnchor="middle" fontSize={6} fill="#7c3aed"
-          fontFamily="system-ui" opacity={0.75}>P680</text>
-      </g>
-
-      {/* ── Electron transport: PS II → PS I (arc through lumen) ── */}
+      {/* ── Electron flow PS II → PS I, inside the membrane ── */}
       {s.electronOp > 0.01 && (
         <g opacity={s.electronOp}>
-          <path d={`M ${PS2X} ${TY2 + 3} C ${PS2X + 22} ${192}, ${PS1X - 22} ${192}, ${PS1X} ${TY2 + 3}`}
-            fill="none" stroke={C.electron} strokeWidth={2}
-            strokeDasharray="5 3" markerEnd="url(#ps-arr-e)" />
-          <text x={(PS2X + PS1X) / 2} y={199} textAnchor="middle" fontSize={7.5}
-            fontWeight={700} fill={C.electron} fontFamily="system-ui">e⁻</text>
+          <line x1={PS2X + 15} y1={(TY1 + TY2) / 2} x2={PS1X - 16} y2={(TY1 + TY2) / 2}
+            stroke={C.electron} strokeWidth={2} strokeDasharray="5 3" markerEnd="url(#ps-arr-e)" />
+          <text x={(PS2X + PS1X) / 2} y={TY1 - 5} textAnchor="middle" fontSize={8} fontWeight={700}
+            fill={C.electron} fontFamily="system-ui">e⁻</text>
         </g>
       )}
 
-      {/* ── PS I protein ── */}
-      <g opacity={s.ps1Op}>
-        <rect x={PS1X - 13} y={TY1} width={26} height={TY2 - TY1}
-          rx={4} fill={C.ps1} fillOpacity={0.88} />
-        <text x={PS1X} y={TY1 - 5} textAnchor="middle" fontSize={8} fontWeight={700}
-          fill={C.ps1} fontFamily="system-ui">PS I</text>
-        <text x={PS1X} y={TY1 - 14} textAnchor="middle" fontSize={6} fill="#1d4ed8"
-          fontFamily="system-ui" opacity={0.75}>P700</text>
-      </g>
-
-      {/* ── PS I → NADPH (stroma side) ── */}
-      {s.nadphOp > 0.01 && (
-        <g opacity={s.nadphOp}>
-          <path d={`M ${PS1X + 2} ${TY1 - 1} C ${PS1X + 16} ${116}, 228 ${106}, 240 ${102}`}
-            fill="none" stroke={C.nadph} strokeWidth={1.5}
-            strokeDasharray="4 2" markerEnd="url(#ps-arr-nadph)" />
-          <circle cx={244} cy={98} r={14} fill={C.nadph} fillOpacity={0.9} />
-          <text x={244} y={96} textAnchor="middle" fontSize={7} fontWeight={700}
-            fill="white" fontFamily="system-ui">NADPH</text>
-          <text x={244} y={105} textAnchor="middle" fontSize={5.5} fill="white"
-            fontFamily="system-ui" opacity={0.85}>→ stroma</text>
-        </g>
-      )}
-
-      {/* ── H⁺ ions accumulated in lumen ── */}
+      {/* ── H⁺ accumulated in the lumen ── */}
       {s.hplusOp > 0.01 && HPLUS_POS.map((p, i) => (
-        <g key={i} opacity={s.hplusOp * (0.55 + 0.45 * ((i % 3) / 3))}>
-          <circle cx={p.x} cy={p.y} r={8} fill={C.hplus} fillOpacity={0.82} />
-          <text x={p.x} y={p.y + 3.5} textAnchor="middle" fontSize={7} fontWeight={700}
-            fill="white" fontFamily="system-ui">H⁺</text>
+        <g key={i} opacity={s.hplusOp}>
+          <circle cx={p.x} cy={p.y} r={8} fill={C.hplus} fillOpacity={0.85} />
+          <text x={p.x} y={p.y + 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="white" fontFamily="system-ui">H⁺</text>
         </g>
       ))}
+      {s.synthFlowOp > 0.01 && (
+        <line x1={ATSX - 16} y1={194} x2={ATSX - 8} y2={TY2 + 6} opacity={s.synthFlowOp}
+          stroke={C.hplus} strokeWidth={1.75} markerEnd="url(#ps-arr-h)" />
+      )}
 
-      {/* ── ATP synthase (spans lumen → stroma through membrane) ── */}
-      <g opacity={s.atpSynOp}>
-        <rect x={ATSX - 6} y={TY1 - 16} width={12} height={TY2 - TY1 + 26}
-          rx={5} fill={C.atpSyn} fillOpacity={0.88} />
-        <text x={ATSX} y={TY1 - 20} textAnchor="middle" fontSize={6.5} fontWeight={700}
-          fill={C.atpSyn} fontFamily="system-ui">ATP</text>
-        <text x={ATSX} y={TY1 - 11} textAnchor="middle" fontSize={6.5} fontWeight={700}
-          fill={C.atpSyn} fontFamily="system-ui">synthase</text>
-      </g>
-      {s.atpLRCount > 0.1 && (
-        <g opacity={Math.min(s.atpLRCount / 2, 1)}>
-          <circle cx={ATSX + 19} cy={TY1 - 14} r={12} fill={C.atp} fillOpacity={0.9} />
-          <text x={ATSX + 19} y={TY1 - 10} textAnchor="middle" fontSize={8} fontWeight={700}
-            fill="white" fontFamily="system-ui">ATP</text>
+      {/* ── NADPH (stroma side of PS I) ── */}
+      {s.nadphOp > 0.01 && (
+        <g opacity={s.nadphOp} fontFamily="system-ui">
+          <line x1={PS1X + 13} y1={TY1 - 3} x2={182} y2={102} stroke={C.nadph} strokeWidth={1.5} markerEnd="url(#ps-arr-nadph)" />
+          <circle cx={188} cy={86} r={15} fill={C.nadph} fillOpacity={0.92} />
+          <text x={188} y={89} textAnchor="middle" fontSize={7} fontWeight={700} fill="white">NADPH</text>
         </g>
       )}
 
-      {/* ── Handoff: ATP + NADPH cross midline into stroma ── */}
+      {/* ── ATP (stroma side of ATP synthase) ── */}
+      {s.atpOp > 0.01 && (
+        <g opacity={s.atpOp} fontFamily="system-ui">
+          <circle cx={228} cy={98} r={12} fill={C.atp} fillOpacity={0.92} />
+          <text x={228} y={101} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="white">ATP</text>
+        </g>
+      )}
+
+      {/* ── Calvin cycle ring (always visible) ── */}
+      {[ARC_FIX, ARC_RED, ARC_REGEN, ARC_ENTER].map((d) => (
+        <path key={d} d={d} fill="none" stroke="#9ca3af" strokeWidth={1.5} strokeDasharray="4 3"
+          markerEnd="url(#ps-arr-cyc)" opacity={0.6} />
+      ))}
+      {s.fixArcOp > 0.01 && (
+        <path d={ARC_FIX} fill="none" stroke={C.rubisco} strokeWidth={2.5} markerEnd="url(#ps-arr-fix)" opacity={s.fixArcOp} />
+      )}
+      {s.redArcOp > 0.01 && (
+        <path d={ARC_RED} fill="none" stroke={C.pga} strokeWidth={2.5} markerEnd="url(#ps-arr-red)" opacity={s.redArcOp} />
+      )}
+      {s.regenArcOp > 0.01 && (
+        <path d={ARC_REGEN} fill="none" stroke={C.rup} strokeWidth={2.5} markerEnd="url(#ps-arr-regen)" opacity={s.regenArcOp} />
+      )}
+
+      {/* ── Handoff: ATP + NADPH carried across to the reduction step ── */}
       {s.handoffOp > 0.01 && (
         <g opacity={s.handoffOp}>
-          <path d={`M 244 100 C 249 100, 255 110, ${260 + s.handoffX * 42} 114`}
-            fill="none" stroke={C.nadph} strokeWidth={2}
-            markerEnd="url(#ps-arr-nadph)" />
-          <path d={`M ${ATSX + 19} ${TY1 - 2} C ${ATSX + 32} ${TY1 + 12}, 255 ${TY1 + 18}, ${260 + s.handoffX * 42} ${TY1 + 22}`}
-            fill="none" stroke={C.atp} strokeWidth={2}
-            markerEnd="url(#ps-arr-atp)" />
-          {s.handoffX > 0.45 && (
-            <text x={270 + s.handoffX * 42} y={TY1 + 20} fontSize={7.5} fontWeight={700}
-              fill={C.atp} fontFamily="system-ui">ATP</text>
-          )}
+          <path d="M 203 82 C 258 50, 272 150, 302 196" fill="none" stroke={C.nadph} strokeWidth={2} markerEnd="url(#ps-arr-nadph)" />
+          <path d="M 240 100 C 268 106, 262 214, 310 213" fill="none" stroke={C.atp} strokeWidth={2} markerEnd="url(#ps-arr-atp)" />
+          <text x={292} y={236} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="#166534" fontFamily="system-ui">ATP + NADPH</text>
         </g>
       )}
 
-      {/* ── RuBP (5C, enters RuBisCO) ── */}
-      <g opacity={s.rupOp}>
-        <circle cx={RUPX} cy={RUPY} r={17} fill={C.rup} fillOpacity={0.88} />
-        <text x={RUPX} y={RUPY - 2} textAnchor="middle" fontSize={7.5} fontWeight={700}
-          fill="white" fontFamily="system-ui">RuBP</text>
-        <text x={RUPX} y={RUPY + 8} textAnchor="middle" fontSize={6} fill="white" fontFamily="system-ui">(5C)</text>
-        <path d={`M ${RUPX + 12} ${RUPY - 10} C ${RUPX + 38} ${RUPY - 58}, ${RUBX - 22} ${RUBY + 22}, ${RUBX - 18} ${RUBY + 11}`}
-          fill="none" stroke={C.rup} strokeWidth={1.5}
-          strokeDasharray="4 2" markerEnd="url(#ps-arr-g3p)" opacity={0.55} />
-      </g>
+      {/* ── Cycle intermediates ── */}
+      <EmphasisRing x={RUBISCO.x - 30} y={RUBISCO.y - 15} w={60} h={30} op={s.rubiscoEmph} color={C.rubisco} />
+      <ellipse cx={RUBISCO.x} cy={RUBISCO.y} rx={30} ry={15} fill={C.rubisco} fillOpacity={0.9} />
+      <text x={RUBISCO.x} y={RUBISCO.y + 3} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="white" fontFamily="system-ui">RuBisCO</text>
 
-      {/* ── RuBisCO (carbon fixation enzyme) ── */}
-      <g opacity={s.rubiscoOp}>
-        <ellipse cx={RUBX} cy={RUBY} rx={30} ry={17} fill={C.rubisco} fillOpacity={0.88} />
-        <text x={RUBX} y={RUBY - 2} textAnchor="middle" fontSize={7.5} fontWeight={700}
-          fill="white" fontFamily="system-ui">RuBisCO</text>
-        <text x={RUBX} y={RUBY + 8} textAnchor="middle" fontSize={6} fill="white"
-          fontFamily="system-ui" opacity={0.85}>carbon fixation</text>
-        <path d={`M ${RUBX + 18} ${RUBY + 8} C ${RUBX + 46} ${RUBY + 36}, ${PGAX - 22} ${PGAY - 28}, ${PGAX - 12} ${PGAY - 12}`}
-          fill="none" stroke={C.rubisco} strokeWidth={1.5}
-          strokeDasharray="3 2" markerEnd="url(#ps-arr-mol)" opacity={0.5} />
-      </g>
+      <circle cx={PGA.x} cy={PGA.y} r={16} fill={C.pga} fillOpacity={0.9} />
+      <text x={PGA.x} y={PGA.y - 1} textAnchor="middle" fontSize={7} fontWeight={700} fill="white" fontFamily="system-ui">3-PGA</text>
+      <text x={PGA.x} y={PGA.y + 8} textAnchor="middle" fontSize={6} fill="white" fontFamily="system-ui">(3C)</text>
 
-      {/* ── 3-PGA ── */}
-      <g opacity={s.pgaOp}>
-        <circle cx={PGAX} cy={PGAY} r={15} fill={C.pga} fillOpacity={0.88} />
-        <text x={PGAX} y={PGAY - 1} textAnchor="middle" fontSize={7.5} fontWeight={700}
-          fill="white" fontFamily="system-ui">3-PGA</text>
-        <text x={PGAX} y={PGAY + 9} textAnchor="middle" fontSize={6} fill="white" fontFamily="system-ui">(3C)</text>
-        <path d={`M ${PGAX + 6} ${PGAY + 10} C ${PGAX + 22} ${PGAY + 38}, ${G3PX - 18} ${G3PY - 28}, ${G3PX - 12} ${G3PY - 13}`}
-          fill="none" stroke={C.pga} strokeWidth={1.5}
-          strokeDasharray="3 2" markerEnd="url(#ps-arr-mol)" opacity={0.5} />
-      </g>
+      <circle cx={G3P.x} cy={G3P.y} r={16} fill={C.g3p} fillOpacity={0.92} />
+      <text x={G3P.x} y={G3P.y - 1} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="#1a1a1a" fontFamily="system-ui">G3P</text>
+      <text x={G3P.x} y={G3P.y + 8} textAnchor="middle" fontSize={6} fill="#333" fontFamily="system-ui">(3C)</text>
 
-      {/* ── G3P ── */}
-      <g opacity={s.g3pOp}>
-        <circle cx={G3PX} cy={G3PY} r={15} fill={C.g3p} fillOpacity={0.92} />
-        <text x={G3PX} y={G3PY - 1} textAnchor="middle" fontSize={7.5} fontWeight={700}
-          fill="#1a1a1a" fontFamily="system-ui">G3P</text>
-        <text x={G3PX} y={G3PY + 9} textAnchor="middle" fontSize={6} fill="#333" fontFamily="system-ui">(3C)</text>
-        {/* Exit: 1 G3P → glucose */}
-        <path d={`M ${G3PX + 12} ${G3PY - 5} C ${G3PX + 34} ${G3PY - 22}, ${G3PX + 50} ${G3PY - 30}, ${G3PX + 56} ${G3PY - 40}`}
-          fill="none" stroke={C.g3p} strokeWidth={1.5}
-          markerEnd="url(#ps-arr-g3p)" opacity={0.65} />
-        {s.turnCount > 2.5 && (
-          <text x={G3PX + 62} y={G3PY - 44} fontSize={7} fontWeight={700}
-            fill={C.g3p} fontFamily="system-ui">→ glucose</text>
-        )}
-        {/* Regeneration: G3P → RuBP */}
-        <path d={`M ${G3PX - 12} ${G3PY + 7} C ${G3PX - 58} ${G3PY + 32}, ${RUPX + 32} ${RUPY + 26}, ${RUPX + 15} ${RUPY + 9}`}
-          fill="none" stroke={C.g3p} strokeWidth={1.5}
-          strokeDasharray="4 2" markerEnd="url(#ps-arr-g3p)" opacity={0.42} />
-      </g>
+      <circle cx={RUBP.x} cy={RUBP.y} r={17} fill={C.rup} fillOpacity={0.9} />
+      <text x={RUBP.x} y={RUBP.y - 1} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="white" fontFamily="system-ui">RuBP</text>
+      <text x={RUBP.x} y={RUBP.y + 8} textAnchor="middle" fontSize={6} fill="white" fontFamily="system-ui">(5C)</text>
+
+      {/* ── Output: G3P → glucose ── */}
+      {s.outputOp > 0.01 && (
+        <g opacity={s.outputOp}>
+          <line x1={G3P.x + 13} y1={G3P.y + 10} x2={G3P.x + 34} y2={G3P.y + 28}
+            stroke={C.g3p} strokeWidth={2} markerEnd="url(#ps-arr-g3p)" />
+          <text x={G3P.x + 40} y={G3P.y + 34} fontSize={8} fontWeight={700} fill="#a16207" fontFamily="system-ui">glucose</text>
+        </g>
+      )}
 
       {/* ── Turn counter ── */}
-      {s.turnCount > 0.1 && (
-        <g>
-          <rect x={302} y={248} width={88} height={28} rx={8}
-            fill="#f0fdf4" stroke="#bbf7d0" strokeWidth={1} />
-          <text x={346} y={260} textAnchor="middle" fontSize={8} fontWeight={700}
-            fill="#166534" fontFamily="system-ui">Turn {Math.min(Math.round(s.turnCount), 3)} / 3</text>
-          <text x={346} y={271} textAnchor="middle" fontSize={6.5} fill="#4ade80" fontFamily="system-ui">
-            3 CO₂ → 1 net G3P
+      {s.turnOp > 0.01 && (
+        <g opacity={s.turnOp} fontFamily="system-ui">
+          <rect x={262} y={56} width={74} height={26} rx={8} fill="#f0fdf4" stroke="#bbf7d0" strokeWidth={1} />
+          <text x={299} y={67} textAnchor="middle" fontSize={8} fontWeight={700} fill="#166534">
+            Turn {Math.min(Math.max(Math.round(s.turnCount), 1), 3)} / 3
           </text>
+          <text x={299} y={77} textAnchor="middle" fontSize={6.5} fill="#16a34a">3 CO₂ → 1 net G3P</text>
         </g>
       )}
 
@@ -559,13 +453,12 @@ function InterpolatedDiagram({ progress }: { progress: number }) {
       {s.co2Op > 0.01 && (
         <g opacity={s.co2Op}>
           <circle cx={s.co2X} cy={s.co2Y} r={12} fill={C.co2} fillOpacity={0.92} />
-          <text x={s.co2X} y={s.co2Y + 4} textAnchor="middle" fontSize={8} fontWeight={700}
-            fill="white" fontFamily="system-ui">CO₂</text>
+          <text x={s.co2X} y={s.co2Y + 3} textAnchor="middle" fontSize={8} fontWeight={700} fill="white" fontFamily="system-ui">CO₂</text>
         </g>
       )}
 
       {/* ── Overall equation ── */}
-      <text x={CX} y={291} textAnchor="middle" fontSize={7.5} fill="#9ca3af" fontFamily="system-ui">
+      <text x={250} y={292} textAnchor="middle" fontSize={7.5} fill="#9ca3af" fontFamily="system-ui">
         6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂
       </text>
     </svg>
@@ -700,14 +593,50 @@ export function PhotosynthesisPanel() {
 }
 
 // ─── Emblem (lesson card thumbnail) ──────────────────────────────────────────
+// A sunlit leaf giving off O₂ bubbles.
 export function PhotosynthesisEmblem({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 120 80" className={className} aria-hidden="true">
-      <ellipse cx={60} cy={40} rx={54} ry={34} fill="#d1fae5" stroke="#16a34a" strokeWidth={2} />
-      <rect x={20} y={33} width={40} height={14} rx={4} fill="#059669" opacity={0.7} />
-      <text x={60} y={44} textAnchor="middle" fontSize={9} fontWeight={800} fill="#065f46" fontFamily="system-ui">
-        Photosynthesis
-      </text>
+    <svg viewBox="0 -2 120 106" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="ps-emb-leaf" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="#15803d" />
+          <stop offset="100%" stopColor="#4ade80" />
+        </linearGradient>
+      </defs>
+
+      {/* Sun and light rays */}
+      <g stroke="#facc15" strokeWidth={2} strokeLinecap="round">
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+          <line key={deg} x1={20} y1={9} x2={20} y2={4} transform={`rotate(${deg} 20 18)`} />
+        ))}
+      </g>
+      <circle cx={20} cy={18} r={7} fill="#fde047" stroke="#facc15" strokeWidth={1.5} />
+      <g stroke="#facc15" strokeWidth={1.5} strokeDasharray="3 3" strokeLinecap="round" opacity={0.8}>
+        <line x1={31} y1={25} x2={43} y2={35} />
+        <line x1={27} y1={30} x2={35} y2={42} />
+      </g>
+
+      {/* Leaf, tilted up toward the light */}
+      <g transform="rotate(-25 62 50)">
+        <line x1={4} y1={50} x2={16} y2={50} stroke="#15803d" strokeWidth={3} strokeLinecap="round" />
+        <path d="M 15 50 C 35 22, 80 18, 106 50 C 80 80, 35 78, 15 50 Z" fill="url(#ps-emb-leaf)" />
+        <line x1={15} y1={50} x2={104} y2={50} stroke="#dcfce7" strokeWidth={1.6} strokeLinecap="round" opacity={0.9} />
+        <g stroke="#dcfce7" strokeWidth={1} strokeLinecap="round" opacity={0.75} fill="none">
+          {[34, 52, 70, 86].map((x) => (
+            <g key={x}>
+              <path d={`M ${x} 50 Q ${x + 8} 42, ${x + 15} ${x < 80 ? 32 : 38}`} />
+              <path d={`M ${x} 50 Q ${x + 8} 58, ${x + 15} ${x < 80 ? 68 : 62}`} />
+            </g>
+          ))}
+        </g>
+      </g>
+
+      {/* O₂ bubbles rising off the leaf */}
+      <g fill="#e0f2fe" stroke="#38bdf8" strokeWidth={1.2}>
+        <circle cx={104} cy={12} r={4.5} />
+        <circle cx={112} cy={24} r={3} />
+        <circle cx={95} cy={4} r={2.5} />
+      </g>
     </svg>
   );
 }
