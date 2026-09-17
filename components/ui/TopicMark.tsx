@@ -17,11 +17,19 @@ export function TopicMark({ id, className }: { id: TopicId; className?: string }
     case "genetics":
       return (
         <svg {...common}>
-          <path d="M 14 5 C 34 15, 14 33, 34 43" stroke="#09090b" strokeWidth={2.5} strokeLinecap="round" />
-          <path d="M 34 5 C 14 15, 34 33, 14 43" stroke="#8b5cf6" strokeWidth={2.5} strokeLinecap="round" />
-          {[[18, 11, 30], [21, 19, 27], [21, 29, 27], [18, 37, 30]].map(([x1, y, x2]) => (
-            <line key={y} x1={x1} y1={y} x2={x2} y2={y} stroke="#f472b6" strokeWidth={2.5} strokeLinecap="round" />
+          {/* Base-pair rungs between the strand crossings, each split into two bases */}
+          {[
+            [10.5, 15, 33, "#22c55e", "#f43f5e"], [15, 12, 36, "#f59e0b", "#3b82f6"], [19.5, 15, 33, "#f43f5e", "#22c55e"],
+            [28.5, 15, 33, "#3b82f6", "#f59e0b"], [33, 12, 36, "#22c55e", "#f43f5e"], [37.5, 15, 33, "#f59e0b", "#3b82f6"],
+          ].map(([y, x1, x2, left, right]) => (
+            <g key={y} strokeWidth={3}>
+              <line x1={x1} y1={y} x2={24} y2={y} stroke={left as string} />
+              <line x1={24} y1={y} x2={x2} y2={y} stroke={right as string} />
+            </g>
           ))}
+          {/* Two strands twisting around each other */}
+          <path d="M 24 6 C 8 12, 8 18, 24 24 C 40 30, 40 36, 24 42" stroke="#8b5cf6" strokeWidth={3} strokeLinecap="round" />
+          <path d="M 24 6 C 40 12, 40 18, 24 24 C 8 30, 8 36, 24 42" stroke="#09090b" strokeWidth={3} strokeLinecap="round" />
         </svg>
       );
     default:
