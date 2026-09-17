@@ -195,7 +195,7 @@ const PS: PhaseState[] = [
 
 // ─── Interpolated cell SVG ────────────────────────────────────────────────────
 
-function InterpolatedCell({ progress, viewBox: vb = "0 0 400 280" }: { progress: number; viewBox?: string }) {
+function InterpolatedCell({ progress }: { progress: number }) {
   const clamped = Math.max(0, Math.min(progress, PS.length - 1));
   const fi = Math.min(Math.floor(clamped), PS.length - 1);
   const ci = Math.min(fi + 1, PS.length - 1);
@@ -234,7 +234,7 @@ function InterpolatedCell({ progress, viewBox: vb = "0 0 400 280" }: { progress:
   const centAnchorCy = s.xchroms[0].opacity > 0.05 ? s.xchroms[0].cy : s.vtop[0].cy;
 
   return (
-    <svg viewBox={vb} className="w-full h-full" aria-label="Mitosis cell diagram">
+    <svg viewBox="0 0 400 280" className="w-full h-full" aria-label="Mitosis cell diagram">
 
       {/* ── Main cell ── */}
       <ellipse cx={200} cy={140} rx={s.cellRx} ry={s.cellRy}
@@ -725,9 +725,38 @@ export function MitosisAnimation() {
 // ─── Lesson card emblem (telophase snapshot) ──────────────────────────────────
 
 export function MitosisEmblem({ className }: { className?: string }) {
+  // Late anaphase: spindle fibres pull identical chromatid sets to opposite poles
+  // while the cleavage furrow starts to pinch the cell in two.
+  const CYM = 36;
+  const rows = [-11, 0, 11];
   return (
-    <div className={className ?? "w-full h-full"}>
-      <InterpolatedCell progress={4} viewBox="80 20 240 240" />
-    </div>
+    <svg viewBox="0 -2 120 106" className={className} aria-hidden="true">
+      <path
+        d={`M 60 ${CYM - 18} C 46 ${CYM - 30}, 6 ${CYM - 30}, 6 ${CYM} C 6 ${CYM + 30}, 46 ${CYM + 30}, 60 ${CYM + 18}
+            C 74 ${CYM + 30}, 114 ${CYM + 30}, 114 ${CYM} C 114 ${CYM - 30}, 74 ${CYM - 30}, 60 ${CYM - 18} Z`}
+        fill="#ecfdf5" stroke={C.membrane} strokeWidth={2.5} />
+
+      {/* Spindle fibres from each pole to its chromatids */}
+      <g stroke={C.spindle} strokeWidth={0.9} opacity={0.75}>
+        {rows.map((dy) => (
+          <g key={dy}>
+            <line x1={17} y1={CYM} x2={35} y2={CYM + dy} />
+            <line x1={103} y1={CYM} x2={85} y2={CYM + dy} />
+          </g>
+        ))}
+      </g>
+      <circle cx={16} cy={CYM} r={3} fill={C.spindle} />
+      <circle cx={104} cy={CYM} r={3} fill={C.spindle} />
+
+      {/* Chromatids — V shapes trailing behind their centromeres */}
+      <g fill="none" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+        {rows.map((dy, i) => (
+          <g key={dy} stroke={C.chrom[i]}>
+            <path d={`M 43 ${CYM + dy - 3} L 36 ${CYM + dy} L 43 ${CYM + dy + 3}`} />
+            <path d={`M 77 ${CYM + dy - 3} L 84 ${CYM + dy} L 77 ${CYM + dy + 3}`} />
+          </g>
+        ))}
+      </g>
+    </svg>
   );
 }

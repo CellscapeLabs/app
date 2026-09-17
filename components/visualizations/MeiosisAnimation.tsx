@@ -560,7 +560,7 @@ function VDown({ v, s0, s1, s2, s3, s4, s5 }: {
   );
 }
 
-function InterpolatedCell({ progress, crossover, viewBox: vb = "0 0 400 280" }: { progress: number; crossover: CrossoverPattern; viewBox?: string }) {
+function InterpolatedCell({ progress, crossover }: { progress: number; crossover: CrossoverPattern }) {
   const clamped = Math.max(0, Math.min(progress, PS.length - 1));
   const fi = Math.min(Math.floor(clamped), PS.length - 1);
   const ci = Math.min(fi + 1, PS.length - 1);
@@ -578,7 +578,7 @@ function InterpolatedCell({ progress, crossover, viewBox: vb = "0 0 400 280" }: 
   const showHaploidLabel  = s.cells4[0].rx > 10;
 
   return (
-    <svg viewBox={vb} className="w-full h-full" aria-label="Meiosis cell diagram">
+    <svg viewBox="0 0 400 280" className="w-full h-full" aria-label="Meiosis cell diagram">
 
       {/* ── Main cell (Meiosis I) ── */}
       {s.cellOp > 0.01 && (
@@ -1286,9 +1286,47 @@ export function MeiosisAnimation() {
 // ─── Emblem (Anaphase I snapshot for lesson card) ─────────────────────────────
 
 export function MeiosisEmblem({ className }: { className?: string }) {
+  // One diploid cell (maternal violet + paternal amber homologs) → four haploid cells,
+  // each with a different mix of chromosomes — two carrying crossover segments.
+  const MAT = C.homA_mat, PAT = C.homA_pat, MEM = C.membrane;
+  const rod = (x: number, y: number, len: number, color: string, tip?: string) => (
+    <g strokeWidth={3} strokeLinecap="round">
+      <line x1={x} y1={y - len / 2} x2={x} y2={y + len / 2} stroke={color} />
+      {tip && <line x1={x} y1={y + len / 2 - 3.5} x2={x} y2={y + len / 2} stroke={tip} />}
+    </g>
+  );
+  const daughters: { x: number; y: number; big: [string, string?]; small: string }[] = [
+    { x: 80,  y: 15, big: [MAT],      small: PAT },
+    { x: 106, y: 15, big: [PAT],      small: MAT },
+    { x: 80,  y: 45, big: [MAT, PAT], small: MAT },
+    { x: 106, y: 45, big: [PAT, MAT], small: PAT },
+  ];
   return (
-    <div className={className ?? "w-full h-full"}>
-      <InterpolatedCell progress={3} crossover={DEFAULT_CROSSOVER} viewBox="80 20 240 240" />
-    </div>
+    <svg viewBox="0 -2 120 106" className={className} aria-hidden="true">
+      <defs>
+        <marker id="me-emb-arr" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <path d="M0,0 L0,7 L7,3.5 z" fill="#94a3b8" />
+        </marker>
+      </defs>
+
+      {/* Parent cell: two homologous pairs, each chromosome replicated (X shape) */}
+      <circle cx={28} cy={30} r={23} fill="#ecfdf5" stroke={MEM} strokeWidth={2.5} />
+      <g fill="none" strokeWidth={2.8} strokeLinecap="round">
+        {([[14, MAT, 8], [23, PAT, 8], [34, MAT, 4.5], [42, PAT, 4.5]] as const).map(([x, color, h]) => (
+          <path key={x} d={`M ${x - 2.5} ${30 - h} L ${x + 2.5} ${30 + h} M ${x + 2.5} ${30 - h} L ${x - 2.5} ${30 + h}`} stroke={color} />
+        ))}
+      </g>
+
+      {/* Two divisions → four cells */}
+      <line x1={53} y1={30} x2={63} y2={30} stroke="#94a3b8" strokeWidth={2} markerEnd="url(#me-emb-arr)" />
+
+      {daughters.map(({ x, y, big, small }) => (
+        <g key={`${x}-${y}`}>
+          <circle cx={x} cy={y} r={12} fill="#ecfdf5" stroke={MEM} strokeWidth={2} />
+          {rod(x - 3, y, 12, big[0], big[1])}
+          {rod(x + 4, y + 1, 7, small)}
+        </g>
+      ))}
+    </svg>
   );
 }

@@ -24,6 +24,7 @@ import {
   type AnimationPlaybackControls,
 } from "framer-motion";
 import type React from "react";
+import { fadeLerp } from "@/lib/scrub";
 
 // ─── Bases ────────────────────────────────────────────────────────────────────
 export type Base = "A" | "T" | "G" | "C";
@@ -67,7 +68,6 @@ const CX     = 200;
 const CY     = 128;
 const R      = 50;
 const OMEGA  = (2 * Math.PI) / 10;  // ~10 bp per full turn
-const GROOVE = 0.9;                  // strand phase offset (rad) → major/minor grooves
 const BW     = 13;                   // base rect width
 const SEG_STEP = 0.25;               // backbone sampling (in base-pair units)
 const ZOOM_K = 2;                    // nucleotide index shown at stage 5
@@ -100,9 +100,13 @@ const KS: DNAState[] = [
   { twist: 0, measureOp: 0, ladderLabelOp: 0, letterOp: 0.5, hbondOp: 0.3, pairLegendOp: 0, directionOp: 0, zoom: 1 },
 ];
 
+// twist and zoom drive geometry, so they move linearly; everything else is an
+// opacity and cross-fades so outgoing and incoming labels never overlap mid-scrub.
 function lerpState(a: DNAState, b: DNAState, t: number): DNAState {
   const out = { ...a };
-  (Object.keys(a) as (keyof DNAState)[]).forEach((k) => { out[k] = lerp(a[k], b[k], t); });
+  (Object.keys(a) as (keyof DNAState)[]).forEach((k) => {
+    out[k] = k === "twist" || k === "zoom" ? lerp(a[k], b[k], t) : fadeLerp(a[k], b[k], t);
+  });
   return out;
 }
 
@@ -211,7 +215,7 @@ function HelixDiagram({ progress, rot, sequence }: { progress: number; rot: numb
   const tw = s.twist;
 
   const thetaA = (u: number) => Math.PI + tw * (u * OMEGA + rot);
-  const thetaB = (u: number) => thetaA(u) + Math.PI - tw * GROOVE;
+  const thetaB = (u: number) => thetaA(u) + Math.PI;  // strands drawn directly opposite for an even helix
   const xOf = (u: number) => q(X0 + u * SP);
   const yOf = (th: number) => q(CY + R * Math.cos(th));
   const zOf = (th: number) => q(-Math.sin(th));  // positive = toward viewer (right-handed helix)
@@ -244,6 +248,8 @@ function HelixDiagram({ progress, rot, sequence }: { progress: number; rot: numb
     .sort((a, b) => a.z - b.z || a.i - b.i);  // index tiebreak keeps the order stable
 
   const BACK = -0.02;
+  // The close-up only fades in once the ladder has shrunk out of its way
+  const detailOp  = fadeLerp(0, 1, s.zoom);
   const zoomScale = lerp(1, 0.62, s.zoom);
   const zoomY     = lerp(CY, 60, s.zoom);
   const toScreen  = (x: number, y: number) => ({ x: CX + (x - CX) * zoomScale, y: zoomY + (y - CY) * zoomScale });
@@ -314,7 +320,24 @@ function HelixDiagram({ progress, rot, sequence }: { progress: number; rot: numb
 
         {s.zoom > 0.01 && (
           <rect x={hlX} y={hlY} width={hlW} height={hlH} rx={4} fill="none"
-            stroke={C.highlight} strokeWidth={2} strokeDasharray="4 3" opacity={s.zoom} />
+            stroke={C.highlight} strokeWidth={2} strokeDasharray="4 3" opacity={detailOp} />
+        )}
+
+        {/* ── Stage 4: antiparallel orientation (inside the zoom group so it shrinks with the ladder) ── */}
+        {s.directionOp > 0.01 && (
+          <g opacity={s.directionOp} fontFamily="system-ui" fontWeight={800}>
+            <text x={20} y={CY - R + 4} textAnchor="middle" fontSize={12} fill={C.highlight}>5′</text>
+            <text x={380} y={CY - R + 4} textAnchor="middle" fontSize={12} fill={C.highlight}>3′</text>
+            <text x={20} y={CY + R + 4} textAnchor="middle" fontSize={12} fill={C.highlight}>3′</text>
+            <text x={380} y={CY + R + 4} textAnchor="middle" fontSize={12} fill={C.highlight}>5′</text>
+            <line x1={140} y1={CY - R - 14} x2={260} y2={CY - R - 14} stroke={C.label} strokeWidth={1.5} markerEnd="url(#dna-arrow)" />
+            <text x={CX} y={CY - R - 21} textAnchor="middle" fontSize={9} fill={C.label}>5′ → 3′</text>
+            <line x1={260} y1={CY + R + 14} x2={140} y2={CY + R + 14} stroke={C.label} strokeWidth={1.5} markerEnd="url(#dna-arrow)" />
+            <text x={CX} y={CY + R + 29} textAnchor="middle" fontSize={9} fill={C.label}>3′ ← 5′</text>
+            <text x={CX} y={CY + R + 52} textAnchor="middle" fontSize={8.5} fontWeight={500} fill={C.label}>
+              Strands run in opposite directions — antiparallel
+            </text>
+          </g>
         )}
       </g>
 
@@ -333,7 +356,7 @@ function HelixDiagram({ progress, rot, sequence }: { progress: number; rot: numb
             Right-handed double helix
           </text>
           <text x={CX} y={CY + R + 46} textAnchor="middle" fontSize={7.5} fill={C.muted}>
-            Offset backbones form a wide major groove and a narrow minor groove
+            Two sugar-phosphate backbones wind around a shared axis
           </text>
         </g>
       )}
@@ -374,31 +397,14 @@ function HelixDiagram({ progress, rot, sequence }: { progress: number; rot: numb
         </g>
       )}
 
-      {/* ── Stage 4: antiparallel orientation ── */}
-      {s.directionOp > 0.01 && (
-        <g opacity={s.directionOp} fontFamily="system-ui" fontWeight={800}>
-          <text x={20} y={CY - R + 4} textAnchor="middle" fontSize={12} fill={C.highlight}>5′</text>
-          <text x={380} y={CY - R + 4} textAnchor="middle" fontSize={12} fill={C.highlight}>3′</text>
-          <text x={20} y={CY + R + 4} textAnchor="middle" fontSize={12} fill={C.highlight}>3′</text>
-          <text x={380} y={CY + R + 4} textAnchor="middle" fontSize={12} fill={C.highlight}>5′</text>
-          <line x1={140} y1={CY - R - 14} x2={260} y2={CY - R - 14} stroke={C.label} strokeWidth={1.5} markerEnd="url(#dna-arrow)" />
-          <text x={CX} y={CY - R - 21} textAnchor="middle" fontSize={9} fill={C.label}>5′ → 3′</text>
-          <line x1={260} y1={CY + R + 14} x2={140} y2={CY + R + 14} stroke={C.label} strokeWidth={1.5} markerEnd="url(#dna-arrow)" />
-          <text x={CX} y={CY + R + 29} textAnchor="middle" fontSize={9} fill={C.label}>3′ ← 5′</text>
-          <text x={CX} y={CY + R + 52} textAnchor="middle" fontSize={8.5} fontWeight={500} fill={C.label}>
-            Strands run in opposite directions — antiparallel
-          </text>
-        </g>
-      )}
-
       {/* ── Stage 5: nucleotide close-up ── */}
       {s.zoom > 0.01 && (
-        <g opacity={s.zoom}>
+        <g opacity={detailOp}>
           <line x1={hlBL.x} y1={hlBL.y} x2={68} y2={124} stroke={C.highlight} strokeWidth={1} strokeDasharray="3 3" />
           <line x1={hlBR.x} y1={hlBR.y} x2={332} y2={124} stroke={C.highlight} strokeWidth={1} strokeDasharray="3 3" />
         </g>
       )}
-      <NucleotideDetail base={sequence[ZOOM_K]} op={s.zoom} />
+      <NucleotideDetail base={sequence[ZOOM_K]} op={detailOp} />
 
       <text x={CX} y={272} textAnchor="middle" fontSize={7.5} fill="#9ca3af" fontFamily="system-ui">
         DNA · deoxyribonucleic acid
@@ -415,7 +421,7 @@ const STAGES = [
     accent:    "#7c3aed",
     accentBg:  "rgba(124,58,237,0.07)",
     dotClass:  "bg-violet-500",
-    description: "DNA is two long strands wound around each other into a right-handed double helix. The shape is remarkably uniform: about 2 nm wide, completing one full turn every 3.4 nm — roughly 10 base pairs. Because the two backbones aren't directly opposite each other, the helix has a wide major groove and a narrow minor groove.",
+    description: "DNA is two long strands wound around each other into a right-handed double helix. The shape is remarkably uniform: about 2 nm wide, completing one full turn every 3.4 nm — roughly 10 base pairs. In real DNA the two backbones sit slightly off-center from each other, giving the helix a wide major groove and a narrow minor groove (drawn evenly here for clarity).",
     keyPoints: [
       "Two strands twisted into a right-handed helix",
       "Constant width of ~2 nm along the entire molecule",
@@ -852,33 +858,35 @@ export function DnaSequenceBuilder() {
 }
 
 // ─── Emblem (lesson card thumbnail) ──────────────────────────────────────────
-// A short static stretch of twisted helix.
 export function DnaStructureEmblem({ className }: { className?: string }) {
-  const count = 9;
-  const ex = (i: number) => 14 + i * 11.5;
-  const angle = (i: number) => 0.6 + i * OMEGA;
-  const ey = (th: number) => q(40 + 22 * Math.cos(th));
+  // A bold stretch of double helix: two backbones with colored base-pair rungs.
+  const count = 11;
+  const XA = 12, XB = 108, YC = 30, AMP = 20;
+  const ex = (u: number) => XA + (u * (XB - XA)) / (count - 1);
+  const angle = (u: number) => 0.4 + u * OMEGA;
+  const ey = (th: number) => q(YC + AMP * Math.cos(th));
   const strand = (offset: number) =>
     Array.from({ length: (count - 1) * 4 + 1 }, (_, j) => {
       const u = j / 4;
       return `${j === 0 ? "M" : "L"} ${ex(u).toFixed(1)} ${ey(angle(u) + offset).toFixed(1)}`;
     }).join(" ");
+  const partner = Math.PI;
 
   return (
-    <svg viewBox="0 0 120 80" className={className} aria-hidden="true">
+    <svg viewBox="0 -2 120 106" className={className} aria-hidden="true">
+      <path d={strand(partner)} fill="none" stroke="#c4b5fd" strokeWidth={4} strokeLinecap="round" />
       {DEFAULT_SEQUENCE.slice(0, count).map((b, i) => {
         const y1 = ey(angle(i));
-        const y2 = ey(angle(i) + Math.PI - GROOVE);
+        const y2 = ey(angle(i) + partner);
         const mid = (y1 + y2) / 2;
         return (
-          <g key={i}>
-            <line x1={ex(i)} y1={y1} x2={ex(i)} y2={mid} stroke={BASE_COLOR[b]} strokeWidth={4} />
-            <line x1={ex(i)} y1={mid} x2={ex(i)} y2={y2} stroke={BASE_COLOR[COMPLEMENT[b]]} strokeWidth={4} />
+          <g key={i} strokeWidth={4.5} strokeLinecap="round">
+            <line x1={ex(i)} y1={y1} x2={ex(i)} y2={mid} stroke={BASE_COLOR[b]} />
+            <line x1={ex(i)} y1={mid} x2={ex(i)} y2={y2} stroke={BASE_COLOR[COMPLEMENT[b]]} />
           </g>
         );
       })}
-      <path d={strand(0)} fill="none" stroke={C.backbone} strokeWidth={3} strokeLinecap="round" />
-      <path d={strand(Math.PI - GROOVE)} fill="none" stroke={C.phosphate} strokeWidth={3} strokeLinecap="round" />
+      <path d={strand(0)} fill="none" stroke={C.backbone} strokeWidth={4} strokeLinecap="round" />
     </svg>
   );
 }
