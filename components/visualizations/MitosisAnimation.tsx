@@ -11,6 +11,7 @@ import {
   type AnimationPlaybackControls,
 } from "framer-motion";
 import type React from "react";
+import { PredictionPrompt, type Prediction } from "@/components/lessons/PredictionPrompt";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -659,8 +660,38 @@ export function MitosisViewer() {
 
 // ─── MitosisPanel ─────────────────────────────────────────────────────────────
 
+// ─── Predictions — asked on a phase, answered by the next one ────────────────
+const PREDICTIONS: Partial<Record<number, Prediction>> = {
+  0: {
+    question: "The DNA was copied during S phase. What happens to it first when mitosis begins?",
+    options: ["It splits into two nuclei right away", "It coils up into visible X-shaped chromosomes", "It is broken down and rebuilt"],
+    correct: 1,
+    explanation: "In prophase, chromatin condenses into chromosomes — each one an X of two identical sister chromatids joined at the centromere.",
+  },
+  1: {
+    question: "Where do you think the chromosomes will line up next?",
+    options: ["Clustered at one pole", "Around the edge of the nucleus", "Single-file across the middle of the cell"],
+    correct: 2,
+    explanation: "At metaphase, spindle fibers from both poles tug on every chromosome until they line up along the metaphase plate.",
+  },
+  2: {
+    question: "When anaphase begins, what gets pulled apart?",
+    options: ["The sister chromatids of each chromosome", "Pairs of homologous chromosomes", "The two centrosomes"],
+    correct: 0,
+    explanation: "Sister chromatids split at the centromere and move to opposite poles. Homologous pairs separate in meiosis I — not in mitosis.",
+  },
+  4: {
+    question: "Compared with the parent cell, how many chromosomes will each daughter cell have?",
+    options: ["Half as many", "The same number", "Twice as many"],
+    correct: 1,
+    explanation: "Mitosis makes two genetically identical cells, each with the full chromosome set of the parent.",
+  },
+};
+
 export function MitosisPanel() {
   const { snapIdx, progressPct, cur, springTo } = useMitosis();
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const prediction = PREDICTIONS[snapIdx];
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="p-5" style={{ background: cur.accentBg }}>
@@ -692,6 +723,11 @@ export function MitosisPanel() {
             </li>
           ))}
         </ul>
+        {prediction && (
+          <PredictionPrompt key={snapIdx} {...prediction} selected={answers[snapIdx]}
+            onSelect={(i) => setAnswers((prev) => ({ ...prev, [snapIdx]: i }))}
+            onContinue={() => springTo(Math.min(PHASE_COUNT - 1, snapIdx + 1))} />
+        )}
       </div>
       <div className="border-t border-zinc-100 px-5 py-3">
         <div className="mb-2 h-1 w-full rounded-full bg-zinc-100">

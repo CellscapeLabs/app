@@ -20,6 +20,7 @@ import {
 } from "framer-motion";
 import type React from "react";
 import { lerp, fadeLerp, q } from "@/lib/scrub";
+import { PredictionPrompt, type Prediction } from "@/components/lessons/PredictionPrompt";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -546,8 +547,32 @@ export function CellularRespirationViewer() {
 }
 
 // ─── CellularRespirationPanel ─────────────────────────────────────────────────
+// ─── Predictions — asked on a stage, answered by the next one ────────────────
+const PREDICTIONS: Partial<Record<number, Prediction>> = {
+  0: {
+    question: "Where in the cell do you think glucose starts to be broken down?",
+    options: ["Inside the mitochondrion", "In the cytoplasm", "In the nucleus"],
+    correct: 1,
+    explanation: "Glycolysis happens in the cytoplasm and doesn't need oxygen — that's why even bacteria without mitochondria can do it.",
+  },
+  1: {
+    question: "Pyruvate now enters the mitochondrion. Which gas will the Krebs cycle release?",
+    options: ["CO₂", "O₂", "N₂"],
+    correct: 0,
+    explanation: "Every carbon atom from glucose leaves as CO₂ during the prep reaction and the Krebs cycle — it's the CO₂ you breathe out.",
+  },
+  2: {
+    question: "Which stage do you predict makes the most ATP?",
+    options: ["Glycolysis", "The Krebs cycle", "The electron transport chain"],
+    correct: 2,
+    explanation: "About 32 of the ~36 ATP come from the electron transport chain, where the H⁺ gradient drives ATP synthase.",
+  },
+};
+
 export function CellularRespirationPanel() {
   const { snapIdx, progressPct, cur, springTo } = useCRCtx();
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const prediction = PREDICTIONS[snapIdx];
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="p-5" style={{ background: cur.accentBg }}>
@@ -579,6 +604,11 @@ export function CellularRespirationPanel() {
             </li>
           ))}
         </ul>
+        {prediction && (
+          <PredictionPrompt key={snapIdx} {...prediction} selected={answers[snapIdx]}
+            onSelect={(i) => setAnswers((prev) => ({ ...prev, [snapIdx]: i }))}
+            onContinue={() => springTo(Math.min(STAGE_COUNT - 1, snapIdx + 1))} />
+        )}
       </div>
       <div className="border-t border-zinc-100 px-5 py-3">
         <div className="mb-2 h-1 w-full rounded-full bg-zinc-100">

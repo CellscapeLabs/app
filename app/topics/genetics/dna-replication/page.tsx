@@ -4,37 +4,37 @@ import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
 import { LessonProgress } from "@/components/lessons/LessonProgress";
 import { ScrollHint } from "@/components/lessons/ScrollHint";
 import {
-  DnaStructureProvider,
-  DnaStructureViewer,
-  DnaStructurePanel,
-  DnaSequenceBuilder,
-} from "@/components/visualizations/DnaStructureVisualization";
+  DnaReplicationProvider,
+  DnaReplicationViewer,
+  DnaReplicationPanel,
+  EnzymeRoster,
+} from "@/components/visualizations/DnaReplicationVisualization";
 
 export const metadata: Metadata = {
-  title: "DNA Structure — Genetics · Cellscape",
+  title: "DNA Replication — Genetics · Cellscape",
   description:
-    "Unwind the double helix, pair the bases, and zoom into a single nucleotide to see how DNA's structure stores genetic information.",
+    "Open a replication fork and watch helicase, primase, DNA polymerase, and ligase copy DNA — including why the lagging strand is built in Okazaki fragments.",
 };
 
 const KEY_CONCEPTS = [
   {
-    icon: "📏",
-    heading: "Same width everywhere",
-    body: "A two-ring purine always pairs with a one-ring pyrimidine, so every rung is the same length. That's why the helix is a uniform ~2 nm wide — and why A–G or C–T pairs don't fit.",
-  },
-  {
-    icon: "🔗",
-    heading: "Strong rails, weak rungs",
-    body: "Covalent phosphodiester bonds hold each backbone together. Only hydrogen bonds hold the two strands to each other, so DNA can be unzipped for copying without breaking the sequence.",
+    icon: "➡️",
+    heading: "Only 5′ → 3′",
+    body: "DNA polymerase can only add nucleotides to a 3′ end. Every other rule of replication — primers, leading vs. lagging strands, Okazaki fragments — follows from this one constraint.",
   },
   {
     icon: "↔️",
-    heading: "Direction matters",
-    body: "The strands are antiparallel: one runs 5′ → 3′, the other 3′ → 5′. Enzymes that copy DNA can only add to a 3′ end — you'll need this for DNA replication.",
+    heading: "Antiparallel templates",
+    body: "Because the two template strands run in opposite directions, one new strand can follow the fork continuously while the other has to be built backward in short pieces.",
+  },
+  {
+    icon: "🧬",
+    heading: "Half old, half new",
+    body: "Each daughter molecule keeps one parent strand. That's semiconservative replication — and it's why each strand can serve as a check on the other.",
   },
 ] as const;
 
-export default function DnaStructurePage() {
+export default function DnaReplicationPage() {
   return (
     <div className="min-h-screen bg-white">
 
@@ -62,32 +62,32 @@ export default function DnaStructurePage() {
           <span>/</span>
           <Link href="/topics/genetics" className="hover:text-zinc-600 transition-colors">Genetics</Link>
           <span>/</span>
-          <span className="text-zinc-600 font-medium">DNA Structure</span>
+          <span className="text-zinc-600 font-medium">DNA Replication</span>
         </nav>
 
         {/* ── Lesson header ── */}
         <div className="mb-8">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">Genetics</span>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-500">15 min</span>
+            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-500">18 min</span>
           </div>
           <h1 className="text-4xl font-black tracking-tight text-zinc-900 lg:text-5xl">
-            DNA Structure
+            DNA Replication
           </h1>
           <p className="mt-3 max-w-2xl text-lg leading-relaxed text-zinc-500">
-            Every trait you inherit is written in a molecule just 2 nanometers wide. Unwind the
-            double helix, pair up its bases, and zoom into a single nucleotide to see how DNA&apos;s
-            shape makes it both stable enough to store information and easy enough to copy.
+            Before a cell divides, it copies all of its DNA — about 6 billion base pairs in a human
+            cell, in a matter of hours. Open a replication fork and follow the team of enzymes that
+            unzips, primes, builds, and seals two perfect copies.
           </p>
         </div>
 
         {/* ── Two-column interactive section ── */}
-        <DnaStructureProvider>
+        <DnaReplicationProvider>
           <div className="lg:grid lg:grid-cols-[5fr_7fr] lg:gap-8 lg:items-start">
 
             {/* Left column — sticky viewer */}
             <div className="mb-6 lg:mb-0 lg:sticky lg:top-24">
-              <DnaStructureViewer />
+              <DnaReplicationViewer />
               <p className="mt-2 text-center text-xs text-zinc-400">
                 Click a stage tab, drag the diagram, or use the ← → keys
               </p>
@@ -97,14 +97,15 @@ export default function DnaStructurePage() {
             <div className="space-y-6">
 
               {/* Stage info panel — stays in sync with the viewer */}
-              <DnaStructurePanel />
+              <DnaReplicationPanel />
 
-              {/* Sequence builder — shares the sequence with the helix */}
+              {/* Enzyme roster — jumps the viewer to each enzyme's stage */}
               <section>
-                <h2 className="mb-3 text-xl font-bold tracking-tight text-zinc-900">
-                  Build a strand
+                <h2 className="mb-1 text-xl font-bold tracking-tight text-zinc-900">
+                  Meet the enzymes
                 </h2>
-                <DnaSequenceBuilder />
+                <p className="mb-3 text-sm text-zinc-500">Tap one to see it at work in the fork.</p>
+                <EnzymeRoster />
               </section>
 
               {/* Key concepts */}
@@ -123,35 +124,31 @@ export default function DnaStructurePage() {
                 </div>
               </section>
 
-              {/* Base table */}
+              {/* Leading vs lagging */}
               <section>
                 <h2 className="mb-4 text-xl font-bold tracking-tight text-zinc-900">
-                  The four bases
+                  Leading vs. lagging strand
                 </h2>
                 <div className="overflow-x-auto rounded-xl border border-zinc-100">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                        <th className="px-4 py-3">Base</th>
-                        <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Rings</th>
-                        <th className="px-4 py-3">Pairs with</th>
-                        <th className="px-4 py-3">H-bonds</th>
+                        <th className="px-4 py-3"></th>
+                        <th className="px-4 py-3">Leading strand</th>
+                        <th className="px-4 py-3">Lagging strand</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
                       {[
-                        ["Adenine (A)",  "Purine",     "2", "Thymine (T)",  "2"],
-                        ["Guanine (G)",  "Purine",     "2", "Cytosine (C)", "3"],
-                        ["Thymine (T)",  "Pyrimidine", "1", "Adenine (A)",  "2"],
-                        ["Cytosine (C)", "Pyrimidine", "1", "Guanine (G)",  "3"],
-                      ].map(([base, type, rings, pair, hb]) => (
-                        <tr key={base} className="bg-white transition-colors hover:bg-zinc-50">
-                          <td className="px-4 py-3 font-medium text-zinc-900">{base}</td>
-                          <td className="px-4 py-3 text-zinc-500">{type}</td>
-                          <td className="px-4 py-3 text-zinc-500">{rings}</td>
-                          <td className="px-4 py-3 text-zinc-500">{pair}</td>
-                          <td className="px-4 py-3 font-bold text-violet-600">{hb}</td>
+                        ["Direction built",   "5′ → 3′, toward the fork",  "5′ → 3′, away from the fork"],
+                        ["Synthesis",         "Continuous",                "Discontinuous (Okazaki fragments)"],
+                        ["RNA primers",       "One",                       "One per fragment"],
+                        ["Ligase needed",     "Rarely",                    "To join every fragment"],
+                      ].map(([row, lead, lag]) => (
+                        <tr key={row} className="bg-white transition-colors hover:bg-zinc-50">
+                          <td className="px-4 py-3 font-medium text-zinc-900">{row}</td>
+                          <td className="px-4 py-3 text-zinc-500">{lead}</td>
+                          <td className="px-4 py-3 text-zinc-500">{lag}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -162,15 +159,14 @@ export default function DnaStructurePage() {
               {/* History */}
               <section className="rounded-xl border-l-4 border-amber-400 bg-amber-50 px-6 py-5">
                 <h2 className="mb-2 text-base font-bold text-zinc-900">
-                  Who figured out the double helix?
+                  How do we know replication is semiconservative?
                 </h2>
                 <p className="text-sm leading-relaxed text-zinc-600">
-                  In 1950, Erwin Chargaff showed that DNA always contains equal amounts of A and T,
-                  and of G and C. In 1952, Rosalind Franklin&apos;s X-ray diffraction image — known as
-                  Photo 51, taken with her student Raymond Gosling — revealed a helix of constant width.
-                  Building on both, James Watson and Francis Crick published their double-helix model
-                  in 1953. <strong>Chargaff&apos;s ratios explained the pairing; Franklin&apos;s data
-                  revealed the shape.</strong>
+                  In 1958, Matthew Meselson and Franklin Stahl grew bacteria on heavy nitrogen
+                  (¹⁵N), then moved them to light nitrogen (¹⁴N). After one generation, all the DNA
+                  had an intermediate density — ruling out the conservative model. After two
+                  generations, half was intermediate and half was light — ruling out the dispersive
+                  model. <strong>Only semiconservative replication fit both results.</strong>
                 </p>
               </section>
 
@@ -179,11 +175,11 @@ export default function DnaStructurePage() {
                 <h2 className="mb-4 text-xl font-bold tracking-tight text-zinc-900">Quick recap</h2>
                 <ol className="space-y-2.5">
                   {[
-                    ["Double helix",  "Two strands twisted into a right-handed helix, ~2 nm wide, ~10 base pairs per turn."],
-                    ["Nucleotide",    "Phosphate + deoxyribose sugar + nitrogenous base. Base on the 1′ carbon, phosphate on the 5′ carbon."],
-                    ["Backbone",      "Alternating sugars and phosphates joined by covalent phosphodiester bonds (3′ –OH to 5′ phosphate)."],
-                    ["Base pairing",  "A=T (2 H-bonds), G≡C (3 H-bonds). A purine always pairs with a pyrimidine, so %A = %T and %G = %C."],
-                    ["DNA vs. RNA",   "RNA uses ribose (with a 2′ –OH), has uracil (U) instead of thymine, and is usually single-stranded."],
+                    ["Unzip",   "Helicase breaks H-bonds at the fork; topoisomerase relieves strain ahead; SSBs keep strands apart."],
+                    ["Prime",   "Primase builds short RNA primers to give DNA polymerase a free 3′ end."],
+                    ["Build",   "DNA polymerase III adds nucleotides 5′ → 3′ — continuously on the leading strand, in Okazaki fragments on the lagging strand."],
+                    ["Clean up", "DNA polymerase I replaces RNA primers with DNA; DNA ligase seals the nicks."],
+                    ["Result",  "Two identical DNA molecules, each with one original and one new strand."],
                   ].map(([term, desc], i) => (
                     <li key={term} className="flex items-start gap-3">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-[11px] font-bold text-white">
@@ -200,9 +196,9 @@ export default function DnaStructurePage() {
 
               {/* Footer nav */}
               <div className="flex items-center justify-between border-t border-zinc-100 pt-6">
-                <Link href="/topics"
+                <Link href="/topics/genetics/dna-structure"
                   className="rounded-full border-2 border-zinc-200 px-6 py-2.5 text-sm font-bold text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50">
-                  ← All Topics
+                  ← DNA Structure
                 </Link>
                 <Link href="/topics/genetics"
                   className="rounded-full bg-violet-600 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-violet-700">
@@ -212,7 +208,7 @@ export default function DnaStructurePage() {
 
             </div>
           </div>
-        </DnaStructureProvider>
+        </DnaReplicationProvider>
 
       </main>
     </div>
