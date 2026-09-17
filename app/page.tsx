@@ -1,9 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import type React from "react";
-import { TOPICS } from "@/content/topics";
-import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
+import { TOPICS, type LessonFormat } from "@/content/topics";
 import { LESSON_EMBLEMS } from "@/components/lessons/lessonEmblems";
+import { SiteNav } from "@/components/ui/SiteNav";
+import { SiteFooter } from "@/components/ui/SiteFooter";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Sticker, Highlight } from "@/components/ui/Sticker";
+import { TopicMark } from "@/components/ui/TopicMark";
+import { TOPIC_THEME } from "@/components/ui/topicTheme";
 import { Reveal } from "@/components/home/Reveal";
 import { HeroCell } from "@/components/home/HeroCell";
 import { ExploreMockup, PredictMockup, ExperimentMockup } from "@/components/home/StepMockups";
@@ -16,139 +20,82 @@ export const metadata: Metadata = {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-const LESSON_COUNT = TOPICS.reduce((n, t) => n + t.lessons.length, 0);
-const NEWEST = { title: "DNA Replication", href: "/topics/genetics/dna-replication" };
+const ALL_LESSONS = TOPICS.flatMap((t) => t.lessons.map((l) => ({ ...l, topic: t.id, href: `/topics/${t.id}/${l.slug}` })));
+const LESSON_COUNT = ALL_LESSONS.length;
+const NEWEST = ALL_LESSONS[ALL_LESSONS.length - 1];
 
-const FORMATS = [
-  {
-    tag: "Virtual lab",
-    lesson: "photosynthesis",
-    title: "Photosynthesis",
-    href: "/topics/cell-biology/photosynthesis",
-    body: "Run the leaf disk assay. Change light, CO₂, and temperature, then graph what happens.",
-    tint: "bg-emerald-50",
-    tagClass: "bg-emerald-100 text-emerald-800",
-  },
-  {
-    tag: "What-if simulator",
-    lesson: "cellular-respiration",
-    title: "Cellular Respiration",
-    href: "/topics/cell-biology/cellular-respiration",
-    body: "Cut off oxygen or add cyanide and watch the whole pipeline jam.",
-    tint: "bg-amber-50",
-    tagClass: "bg-amber-100 text-amber-800",
-  },
-  {
-    tag: "Builder",
-    lesson: "meiosis",
-    title: "Meiosis",
-    href: "/topics/cell-biology/meiosis",
-    body: "Line up chromosomes, cross them over, and collect all 16 possible gametes.",
-    tint: "bg-violet-50",
-    tagClass: "bg-violet-100 text-violet-800",
-  },
-  {
-    tag: "Step-through",
-    lesson: "dna-replication",
-    title: "DNA Replication",
-    href: "/topics/genetics/dna-replication",
-    body: "Open a replication fork and predict each enzyme's next move.",
-    tint: "bg-sky-50",
-    tagClass: "bg-sky-100 text-sky-800",
-  },
-] as const;
-
-const STEPS = [
-  { n: "01", title: "Explore", body: "Drag, tap, and scrub through a process until you can see how the pieces fit.", Mockup: ExploreMockup },
-  { n: "02", title: "Predict", body: "Commit to an answer before the reveal — it's the fastest way to find what you don't know yet.", Mockup: PredictMockup },
-  { n: "03", title: "Experiment", body: "Change the conditions, run trials, and compare results like a real lab.", Mockup: ExperimentMockup },
-] as const;
-
-const TOPIC_ACCENT: Record<string, string> = {
-  "cell-biology": "text-emerald-700",
-  genetics: "text-violet-700",
-  ecosystems: "text-sky-700",
+const FORMAT_STYLE: Record<LessonFormat, { panel: string; sticker: string }> = {
+  "Virtual lab":  { panel: "bg-emerald-200", sticker: "bg-lime-300" },
+  "Simulator":    { panel: "bg-amber-200",   sticker: "bg-orange-300" },
+  "Builder":      { panel: "bg-violet-200",  sticker: "bg-pink-300" },
+  "Step-through": { panel: "bg-sky-200",     sticker: "bg-cyan-300" },
+  "Explorer":     { panel: "bg-rose-200",    sticker: "bg-rose-300" },
 };
 
-// ─── Small pieces ─────────────────────────────────────────────────────────────
+const FEATURED = [
+  { lesson: "photosynthesis",       body: "Run the leaf disk assay. Change light, CO₂, and temperature, then graph what happens." },
+  { lesson: "cellular-respiration", body: "Cut off oxygen or add cyanide and watch the whole pipeline jam." },
+  { lesson: "meiosis",              body: "Line up chromosomes, cross them over, and collect all 16 possible gametes." },
+  { lesson: "dna-replication",      body: "Open a replication fork and predict each enzyme's next move." },
+].flatMap(({ lesson, body }) => {
+  const l = ALL_LESSONS.find((x) => x.id === lesson);
+  return l ? [{ ...l, body }] : [];
+});
 
-function Check() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-4 w-4 text-emerald-600" fill="none" aria-hidden="true">
-      <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+const STEPS = [
+  { n: "1", title: "Explore",    color: "bg-lime-300",   body: "Drag, tap, and scrub through a process until you can see how the pieces fit.", Mockup: ExploreMockup },
+  { n: "2", title: "Predict",    color: "bg-violet-300", body: "Commit to an answer before the reveal — the fastest way to find what you don't know yet.", Mockup: PredictMockup },
+  { n: "3", title: "Experiment", color: "bg-sky-300",    body: "Change the conditions, run trials, and compare results like a real lab.", Mockup: ExperimentMockup },
+] as const;
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return <div className="mb-3 text-sm font-semibold text-emerald-700">{children}</div>;
-}
+const TICKER = [...ALL_LESSONS.map((l) => l.title), ...TOPICS.flatMap((t) => t.upcoming.slice(0, 1).map((u) => `${u.split(" — ")[0]} (soon)`))];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white text-zinc-950">
-
-      {/* ── Nav ── */}
-      <nav className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <CellscapeIcon />
-            <span className="text-[17px] font-bold tracking-tight">Cellscape</span>
-          </Link>
-          <div className="flex items-center gap-7">
-            <Link href="#how-it-works" className="hidden text-sm text-zinc-600 transition-colors hover:text-zinc-950 sm:block">How it works</Link>
-            <Link href="#topics" className="hidden text-sm text-zinc-600 transition-colors hover:text-zinc-950 sm:block">Topics</Link>
-            <Link href="/topics"
-              className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800">
-              Start learning
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen overflow-x-clip bg-white text-zinc-950">
+      <SiteNav />
 
       <main>
         {/* ── Hero ── */}
-        <section className="relative overflow-hidden">
+        <section className="relative">
           <div aria-hidden="true"
             className="absolute inset-0 -z-10 bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_70%_65%_at_50%_35%,black,transparent)] opacity-70" />
 
-          <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 pt-12 pb-16 lg:grid-cols-[1.05fr_1fr] lg:gap-6 lg:pt-20 lg:pb-24">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pt-12 pb-16 lg:grid-cols-[1.05fr_1fr] lg:gap-6 lg:pt-20 lg:pb-24">
             <Reveal>
-              <Link href={NEWEST.href}
-                className="group inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/80 py-1 pl-1 pr-3 text-xs text-zinc-600 shadow-sm transition-colors hover:border-zinc-300">
-                <span className="rounded-full bg-emerald-600 px-2 py-0.5 font-semibold text-white">New</span>
-                {NEWEST.title} lesson
+              <Link href={NEWEST.href} className="group inline-flex items-center gap-2 text-sm font-medium text-zinc-700">
+                <Sticker className="bg-pink-300">New lesson</Sticker>
+                <span className="group-hover:underline">{NEWEST.title}</span>
                 <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
               </Link>
 
-              <h1 className="mt-6 text-[2.9rem] font-semibold leading-[1.02] tracking-[-0.045em] sm:text-6xl lg:text-7xl">
-                Biology you can<br />
-                <span className="text-emerald-600">take apart.</span>
+              <h1 className="isolate mt-6 font-display text-[3.1rem] font-extrabold leading-[0.98] tracking-[-0.035em] sm:text-7xl lg:text-[4.6rem]">
+                Biology you can<br className="hidden sm:block" /> <Highlight>take apart.</Highlight>
               </h1>
 
-              <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-600">
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-700">
                 Interactive lessons, virtual labs, and simulations for AP and intro college biology.
                 Run the experiment, break the pathway, build the cell — and see why it works.
               </p>
 
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link href="/topics"
-                  className="group inline-flex items-center gap-2 rounded-full bg-zinc-950 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-zinc-950/10 transition-colors hover:bg-zinc-800">
-                  Start learning
-                  <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
-                </Link>
-                <Link href="/topics/cell-biology/photosynthesis"
-                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-800 transition-colors hover:border-zinc-300 hover:bg-zinc-50">
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                <ButtonLink href="/topics">
+                  Start learning <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
+                </ButtonLink>
+                <ButtonLink href="/topics/cell-biology/photosynthesis" variant="white">
                   Try the leaf disk lab
-                </Link>
+                </ButtonLink>
               </div>
 
-              <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-600">
-                <li className="flex items-center gap-1.5"><Check />{LESSON_COUNT} interactive lessons</li>
-                <li className="flex items-center gap-1.5"><Check />Free, no sign-up</li>
-                <li className="flex items-center gap-1.5"><Check />Works on your phone</li>
+              <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-zinc-700">
+                {[`${LESSON_COUNT} hands-on lessons`, "Free, no sign-up", "Works on your phone"].map((t) => (
+                  <li key={t} className="flex items-center gap-2">
+                    <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-zinc-950 bg-lime-300 text-[10px] font-black">✓</span>
+                    {t}
+                  </li>
+                ))}
               </ul>
             </Reveal>
 
@@ -158,38 +105,59 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ── Ticker ── */}
+        <div className="relative -left-[2vw] w-[104vw] -rotate-1 border-y-2 border-zinc-950 bg-emerald-500 py-3" aria-hidden="true">
+          <div className="flex w-max animate-marquee">
+            {[0, 1].map((copy) => (
+              <div key={copy} className="flex shrink-0 items-center">
+                {TICKER.map((item) => (
+                  <span key={`${copy}-${item}`} className="flex items-center font-display text-xl font-bold text-white">
+                    <span className="px-6">{item}</span>
+                    <span className="text-lime-300">✳</span>
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* ── Lesson formats ── */}
-        <section id="formats" className="scroll-mt-16 border-y border-zinc-200/70 bg-zinc-50">
-          <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+        <section id="formats" className="scroll-mt-16">
+          <div className="mx-auto max-w-6xl px-6 pt-24 pb-20 lg:pt-32 lg:pb-28">
             <Reveal className="max-w-3xl">
-              <Eyebrow>Not another slideshow</Eyebrow>
-              <h2 className="text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">Every lesson is something you do.</h2>
-              <p className="mt-4 text-lg leading-relaxed text-zinc-600">
+              <Sticker className="bg-orange-300" tilt="rotate-2">Not another slideshow</Sticker>
+              <h2 className="isolate mt-5 font-display text-4xl font-extrabold tracking-[-0.03em] sm:text-6xl">
+                Every lesson is something you <Highlight color="bg-orange-200">do.</Highlight>
+              </h2>
+              <p className="mt-5 text-lg leading-relaxed text-zinc-700">
                 Some lessons are labs. Some are simulations you can break. Some you build with your
                 own hands. The ideas stick because you tested them.
               </p>
             </Reveal>
 
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {FORMATS.map((f, i) => {
-                const Emblem = LESSON_EMBLEMS[f.lesson];
+            <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {FEATURED.map((f, i) => {
+                const Emblem = LESSON_EMBLEMS[f.id];
+                const style = FORMAT_STYLE[f.format];
                 return (
-                  <Reveal key={f.title} delay={i * 0.06} className="h-full">
+                  <Reveal key={f.id} delay={i * 0.06} className="h-full">
                     <Link href={f.href}
-                      className="group flex h-full flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white transition-all hover:-translate-y-1 hover:border-zinc-300 hover:shadow-xl hover:shadow-zinc-900/[0.06]">
-                      <div className={`relative aspect-[4/3] overflow-hidden ${f.tint}`}>
+                      className={`group flex h-full flex-col overflow-hidden rounded-3xl border-2 border-zinc-950 bg-white shadow-[4px_4px_0_0_#09090b] transition-all hover:-translate-y-1 hover:shadow-[6px_8px_0_0_#09090b] ${i % 2 ? "sm:rotate-1" : "sm:-rotate-1"} hover:rotate-0`}>
+                      <div className={`relative aspect-[4/3] overflow-hidden border-b-2 border-zinc-950 ${style.panel}`}>
                         {Emblem && (
-                          <div className="absolute inset-x-6 top-5 bottom-0 transition-transform duration-500 group-hover:scale-105">
+                          <div className="absolute inset-x-6 top-5 bottom-0 transition-transform duration-500 group-hover:scale-110">
                             <Emblem className="h-full w-full" />
                           </div>
                         )}
+                        <span className="absolute left-3 top-3">
+                          <Sticker className={style.sticker}>{f.format}</Sticker>
+                        </span>
                       </div>
                       <div className="flex flex-1 flex-col p-5">
-                        <span className={`self-start rounded-full px-2.5 py-0.5 text-xs font-semibold ${f.tagClass}`}>{f.tag}</span>
-                        <h3 className="mt-3 text-lg font-semibold tracking-tight">{f.title}</h3>
+                        <h3 className="font-display text-xl font-bold tracking-tight">{f.title}</h3>
                         <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">{f.body}</p>
-                        <span className="mt-auto pt-4 text-sm font-semibold text-zinc-950">
-                          Open lesson <span aria-hidden="true" className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
+                        <span className="mt-auto pt-4 text-sm font-bold">
+                          Open lesson <span aria-hidden="true" className="inline-block transition-transform group-hover:translate-x-1">→</span>
                         </span>
                       </div>
                     </Link>
@@ -201,27 +169,31 @@ export default function Home() {
         </section>
 
         {/* ── How a lesson works ── */}
-        <section id="how-it-works" className="scroll-mt-16">
+        <section id="how-it-works" className="scroll-mt-16 border-y-2 border-zinc-950 bg-amber-50">
           <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
-            <Reveal className="max-w-2xl">
-              <Eyebrow>How a lesson works</Eyebrow>
-              <h2 className="text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">Explore. Predict. Experiment.</h2>
-              <p className="mt-4 text-lg leading-relaxed text-zinc-600">
+            <Reveal className="max-w-3xl">
+              <Sticker className="bg-sky-300" tilt="-rotate-2">How a lesson works</Sticker>
+              <h2 className="isolate mt-5 font-display text-4xl font-extrabold tracking-[-0.03em] sm:text-6xl">
+                Explore. Predict. <Highlight color="bg-sky-200">Experiment.</Highlight>
+              </h2>
+              <p className="mt-5 text-lg leading-relaxed text-zinc-700">
                 Built around how learning actually sticks: hands on the model, a guess before the
                 answer, and a chance to test your idea.
               </p>
             </Reveal>
 
-            <ol className="mt-12 grid gap-4 md:grid-cols-3">
-              {STEPS.map(({ n, title, body, Mockup }, i) => (
+            <ol className="mt-14 grid gap-6 md:grid-cols-3">
+              {STEPS.map(({ n, title, color, body, Mockup }, i) => (
                 <Reveal key={n} delay={i * 0.08} className="h-full">
-                  <li className="flex h-full flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white">
-                    <div className="h-40 border-b border-zinc-100 bg-gradient-to-b from-zinc-50 to-white">
+                  <li className="relative flex h-full flex-col rounded-3xl border-2 border-zinc-950 bg-white">
+                    <span className={`absolute -top-5 left-5 flex h-11 w-11 items-center justify-center rounded-full border-2 border-zinc-950 font-display text-xl font-extrabold shadow-[2px_2px_0_0_#09090b] ${color}`}>
+                      {n}
+                    </span>
+                    <div className="h-40 overflow-hidden rounded-t-3xl border-b-2 border-dashed border-zinc-300 pt-4">
                       <Mockup />
                     </div>
                     <div className="p-6">
-                      <div className="font-mono text-xs font-semibold text-emerald-700">{n}</div>
-                      <h3 className="mt-1 text-xl font-semibold tracking-tight">{title}</h3>
+                      <h3 className="font-display text-2xl font-bold tracking-tight">{title}</h3>
                       <p className="mt-2 text-sm leading-relaxed text-zinc-600">{body}</p>
                     </div>
                   </li>
@@ -232,50 +204,44 @@ export default function Home() {
         </section>
 
         {/* ── Topics ── */}
-        <section id="topics" className="scroll-mt-16 border-t border-zinc-200/70 bg-zinc-50">
+        <section id="topics" className="scroll-mt-16">
           <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
             <Reveal className="flex flex-wrap items-end justify-between gap-4">
-              <div className="max-w-2xl">
-                <Eyebrow>Topics</Eyebrow>
-                <h2 className="text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">Pick where your class is.</h2>
+              <div className="max-w-3xl">
+                <Sticker className="bg-violet-300" tilt="rotate-1">Topics</Sticker>
+                <h2 className="isolate mt-5 font-display text-4xl font-extrabold tracking-[-0.03em] sm:text-6xl">
+                  Pick where your <Highlight color="bg-violet-200">class</Highlight> is.
+                </h2>
               </div>
-              <Link href="/topics" className="text-sm font-semibold text-zinc-950 hover:underline">All topics →</Link>
+              <ButtonLink href="/topics" variant="white" size="sm">All topics →</ButtonLink>
             </Reveal>
 
-            <div className="mt-12 grid gap-4 md:grid-cols-3">
+            <div className="mt-14 grid gap-6 md:grid-cols-3">
               {TOPICS.map((topic, i) => {
+                const theme = TOPIC_THEME[topic.id];
                 const count = topic.lessons.length;
                 const available = count > 0;
-                const card = (
-                  <div className={`flex h-full flex-col rounded-3xl border bg-white p-6 transition-all ${
-                    available ? "border-zinc-200 group-hover:-translate-y-1 group-hover:border-zinc-300 group-hover:shadow-xl group-hover:shadow-zinc-900/[0.06]" : "border-dashed border-zinc-300 bg-white/60"
-                  }`}>
-                    <div className="flex h-16 items-center gap-2">
-                      {available ? topic.lessons.slice(0, 3).map((lesson) => {
-                        const Emblem = LESSON_EMBLEMS[lesson.id];
-                        return (
-                          <span key={lesson.id} className="relative h-16 w-16 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50">
-                            {Emblem && <span className="absolute inset-x-1.5 top-2 bottom-0"><Emblem className="h-full w-full" /></span>}
-                          </span>
-                        );
-                      }) : (
-                        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-500">In development</span>
-                      )}
-                    </div>
-                    <h3 className={`mt-5 text-xl font-semibold tracking-tight ${available ? "" : "text-zinc-500"}`}>{topic.title}</h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">{topic.description}</p>
-                    <div className={`mt-auto pt-5 text-sm font-semibold ${available ? TOPIC_ACCENT[topic.id] ?? "text-zinc-950" : "text-zinc-400"}`}>
-                      {available ? <>{count} {count === 1 ? "lesson" : "lessons"} <span aria-hidden="true">→</span></> : "Coming soon"}
-                    </div>
-                  </div>
-                );
                 return (
                   <Reveal key={topic.id} delay={i * 0.06} className="h-full">
-                    {available ? (
-                      <Link href={`/topics/${topic.id}`} className="group block h-full rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
-                        {card}
-                      </Link>
-                    ) : card}
+                    <Link href={`/topics/${topic.id}`}
+                      className={`group flex h-full flex-col rounded-3xl border-2 border-zinc-950 p-6 transition-all ${
+                        available ? `${theme.panel} shadow-[4px_4px_0_0_#09090b] hover:-translate-y-1 hover:shadow-[6px_8px_0_0_#09090b]` : `${theme.soft} border-dashed`
+                      }`}>
+                      <div className="flex items-start justify-between">
+                        <span className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-zinc-950 bg-white">
+                          <TopicMark id={topic.id} className="h-11 w-11" />
+                        </span>
+                        <Sticker className={available ? "bg-white" : "bg-amber-300"} tilt="rotate-3">
+                          {available ? `${count} ${count === 1 ? "lesson" : "lessons"}` : "Coming soon"}
+                        </Sticker>
+                      </div>
+                      <h3 className="mt-6 font-display text-3xl font-extrabold tracking-tight">{topic.title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-zinc-700">{topic.description}</p>
+                      <span className="mt-auto pt-6 text-sm font-bold">
+                        {available ? "Start exploring" : "See what's coming"}{" "}
+                        <span aria-hidden="true" className="inline-block transition-transform group-hover:translate-x-1">→</span>
+                      </span>
+                    </Link>
                   </Reveal>
                 );
               })}
@@ -284,65 +250,41 @@ export default function Home() {
         </section>
 
         {/* ── Closing CTA ── */}
-        <section className="px-6 py-20 lg:py-28">
-          <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-zinc-950 px-8 py-16 text-center sm:px-16 lg:py-20">
-            <div aria-hidden="true" className="absolute left-1/2 top-0 h-64 w-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/25 blur-3xl" />
+        <section className="px-6 pb-24">
+          <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border-2 border-zinc-950 bg-emerald-800 px-8 py-16 text-center shadow-[6px_6px_0_0_#09090b] sm:px-16 lg:py-20">
             <div aria-hidden="true"
-              className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_60%_70%_at_50%_0%,black,transparent)]" />
+              className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:22px_22px]" />
+            {[
+              { id: "photosynthesis", pos: "left-[4%] top-[12%] -rotate-12" },
+              { id: "dna-replication", pos: "right-[5%] top-[10%] rotate-6" },
+              { id: "cellular-respiration", pos: "left-[8%] bottom-[8%] rotate-6" },
+              { id: "meiosis", pos: "right-[7%] bottom-[10%] -rotate-6" },
+            ].map(({ id, pos }) => {
+              const Emblem = LESSON_EMBLEMS[id];
+              return Emblem ? (
+                <span key={id} aria-hidden="true"
+                  className={`absolute hidden h-24 w-24 overflow-hidden rounded-2xl border-2 border-zinc-950 bg-white p-2 shadow-[3px_3px_0_0_#09090b] lg:block ${pos}`}>
+                  <span className="block h-full w-full translate-y-[14%]"><Emblem className="h-full w-full" /></span>
+                </span>
+              ) : null;
+            })}
             <div className="relative">
-              <h2 className="text-4xl font-semibold tracking-[-0.035em] text-white sm:text-5xl">Start with one lesson.</h2>
-              <p className="mx-auto mt-4 max-w-md text-lg text-zinc-400">
+              <h2 className="isolate font-display text-4xl font-extrabold tracking-[-0.03em] text-white sm:text-6xl">
+                Start with <span className="text-lime-300">one lesson.</span>
+              </h2>
+              <p className="mx-auto mt-4 max-w-md text-lg text-emerald-100">
                 Free, no sign-up, and it works on the phone in your pocket.
               </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/topics"
-                  className="group inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-zinc-200">
-                  Browse lessons
-                  <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
-                </Link>
-                <Link href="/topics/cell-biology/meiosis"
-                  className="rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
-                  Try the gamete builder
-                </Link>
+              <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+                <ButtonLink href="/topics">Browse lessons <span aria-hidden="true">→</span></ButtonLink>
+                <ButtonLink href="/topics/cell-biology/meiosis" variant="white">Try the gamete builder</ButtonLink>
               </div>
             </div>
           </Reveal>
         </section>
       </main>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-zinc-200/70">
-        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-12 sm:grid-cols-[2fr_1fr_1fr]">
-          <div>
-            <Link href="/" className="flex items-center gap-2.5">
-              <CellscapeIcon className="h-7 w-7" />
-              <span className="font-bold tracking-tight">Cellscape</span>
-            </Link>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
-              Interactive biology for AP and intro college students.
-            </p>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold">Topics</h3>
-            <ul className="mt-3 space-y-2 text-sm text-zinc-500">
-              {TOPICS.map((t) => (
-                <li key={t.id}><Link href={`/topics/${t.id}`} className="transition-colors hover:text-zinc-950">{t.title}</Link></li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold">Try a lesson</h3>
-            <ul className="mt-3 space-y-2 text-sm text-zinc-500">
-              {FORMATS.map((f) => (
-                <li key={f.href}><Link href={f.href} className="transition-colors hover:text-zinc-950">{f.title}</Link></li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        <div className="border-t border-zinc-200/70">
-          <div className="mx-auto max-w-6xl px-6 py-5 text-xs text-zinc-400">© 2026 Cellscape</div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

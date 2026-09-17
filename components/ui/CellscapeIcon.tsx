@@ -7,7 +7,7 @@ export function CellscapeIcon({ className }: { className?: string }) {
       height={32}
       aria-hidden="true"
       xmlns="http://www.w3.org/2000/svg"
-      className={`rounded-lg shadow-md shadow-emerald-200 ${className ?? ""}`.trim()}
+      className={`rounded-[9px] shadow-[0_0_0_2px_#09090b,2px_2px_0_2px_#09090b] ${className ?? ""}`.trim()}
     >
       <rect x={0} y={0} width={512} height={512} rx={112} fill="#E1F5EE" />
       <ellipse cx={256} cy={256} rx={175} ry={144} fill="none" stroke="#1D9E75" strokeWidth={10.5} />
