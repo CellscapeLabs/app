@@ -75,6 +75,12 @@ export const TOPICS: Topic[] = [
         slug: "dna-structure",
         durationMinutes: 15,
       },
+      {
+        id: "dna-replication",
+        title: "DNA Replication",
+        slug: "dna-replication",
+        durationMinutes: 18,
+      },
     ],
   },
   {
