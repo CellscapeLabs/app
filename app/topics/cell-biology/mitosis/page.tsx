@@ -1,8 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
-import { LessonProgress } from "@/components/lessons/LessonProgress";
 import { ScrollHint } from "@/components/lessons/ScrollHint";
+import { LessonNav } from "@/components/lessons/LessonNav";
 import {
   MitosisProvider,
   MitosisViewer,
@@ -38,19 +37,7 @@ export default function MitosisPage() {
     <div className="min-h-screen bg-white">
 
       {/* ── Nav ── */}
-      <nav className="sticky top-0 z-50 border-b border-zinc-100 bg-white/90 backdrop-blur-sm">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <CellscapeIcon />
-            <span className="font-black tracking-tight text-zinc-900">Cellscape</span>
-          </Link>
-          <Link href="/topics/cell-biology"
-            className="text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900">
-            ← Cell Biology
-          </Link>
-        </div>
-        <LessonProgress color="emerald" />
-      </nav>
+      <LessonNav topic="cell-biology" />
       <ScrollHint />
 
       <main className="mx-auto max-w-6xl px-6 pb-24">
@@ -70,7 +57,7 @@ export default function MitosisPage() {
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Cell Biology</span>
             <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-500">12 min</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tight text-zinc-900 lg:text-5xl">Mitosis</h1>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight text-zinc-900 lg:text-5xl">Mitosis</h1>
           <p className="mt-3 max-w-2xl text-lg leading-relaxed text-zinc-500">
             Every cell in your body came from a single fertilized egg through billions of rounds
             of mitosis. Learn how one cell becomes two — with perfect genetic fidelity — every time.

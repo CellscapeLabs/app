@@ -1,30 +1,13 @@
 import Link from "next/link";
-import { TOPICS } from "@/content/topics";
-import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
 import { notFound } from "next/navigation";
-import { MitosisEmblem } from "@/components/visualizations/MitosisAnimation";
-import { MeiosisEmblem } from "@/components/visualizations/MeiosisAnimation";
-import { OrganelleEmblem } from "@/components/visualizations/OrganellesVisualization";
-import { CellMembraneEmblem } from "@/components/visualizations/CellMembraneVisualization";
-import { OsmosisEmblem } from "@/components/visualizations/OsmosisSimulator";
-import { CellularRespirationEmblem } from "@/components/visualizations/CellularRespirationVisualization";
-import { PhotosynthesisEmblem } from "@/components/visualizations/PhotosynthesisVisualization";
-import { DnaStructureEmblem } from "@/components/visualizations/DnaStructureVisualization";
-import { DnaReplicationEmblem } from "@/components/visualizations/DnaReplicationVisualization";
-import type React from "react";
-
-// Add an emblem here for each new lesson as it's built
-const EMBLEMS: Record<string, React.ComponentType<{ className?: string }>> = {
-  mitosis: MitosisEmblem,
-  meiosis: MeiosisEmblem,
-  organelles: OrganelleEmblem,
-  "cell-membrane": CellMembraneEmblem,
-  osmosis: OsmosisEmblem,
-  "cellular-respiration": CellularRespirationEmblem,
-  photosynthesis: PhotosynthesisEmblem,
-  "dna-structure": DnaStructureEmblem,
-  "dna-replication": DnaReplicationEmblem,
-};
+import { TOPICS } from "@/content/topics";
+import { LESSON_EMBLEMS } from "@/components/lessons/lessonEmblems";
+import { SiteNav } from "@/components/ui/SiteNav";
+import { SiteFooter } from "@/components/ui/SiteFooter";
+import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Sticker } from "@/components/ui/Sticker";
+import { TopicMark } from "@/components/ui/TopicMark";
+import { TOPIC_THEME } from "@/components/ui/topicTheme";
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -35,7 +18,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const topic = TOPICS.find((t) => t.id === slug);
-  return { title: topic ? `${topic.title} — Cellscape` : "Not Found" };
+  return {
+    title: topic ? `${topic.title} — Cellscape` : "Not Found",
+    description: topic ? `Interactive ${topic.title.toLowerCase()} lessons: ${topic.description.toLowerCase()}.` : undefined,
+  };
 }
 
 export default async function TopicPage({ params }: Props) {
@@ -43,82 +29,120 @@ export default async function TopicPage({ params }: Props) {
   const topic = TOPICS.find((t) => t.id === slug);
   if (!topic) notFound();
 
+  const theme = TOPIC_THEME[topic.id];
+  const count = topic.lessons.length;
+  const minutes = topic.lessons.reduce((n, l) => n + l.durationMinutes, 0);
+
   return (
-    <div className="min-h-screen bg-white">
-      <nav className="sticky top-0 z-50 border-b border-zinc-100 bg-white/90 backdrop-blur-sm">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <CellscapeIcon />
-            <span className="font-black text-zinc-900 tracking-tight">Cellscape</span>
-          </Link>
-          <Link href="/topics" className="text-sm font-medium text-zinc-500 hover:text-zinc-900">
-            ← All Topics
-          </Link>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-white text-zinc-950">
+      <SiteNav />
 
-      <main className="mx-auto max-w-4xl px-6 py-20">
-        <div className="mb-2 text-sm font-bold uppercase tracking-widest text-emerald-600">
-          Topic
-        </div>
-        <h1 className="text-4xl font-black tracking-tight text-zinc-900 mb-4">{topic.title}</h1>
-        <p className="text-lg text-zinc-500 mb-12 max-w-xl">{topic.description}</p>
-
-        {topic.lessons.length > 0 ? (
-          <div>
-            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              Lessons
-            </h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {topic.lessons.map((lesson) => {
-                const Emblem = EMBLEMS[lesson.id];
-                return (
-                  <Link
-                    key={lesson.id}
-                    href={`/topics/${topic.id}/${lesson.slug}`}
-                    className="group relative block aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 hover:border-emerald-300"
-                  >
-                    {/* Emblem illustration — sits on light background */}
-                    {Emblem && (
-                      <div className="absolute inset-0 p-4 opacity-90 group-hover:opacity-100 transition-opacity">
-                        <Emblem className="w-full h-full" />
-                      </div>
-                    )}
-
-                    {/* Gradient fade from zinc-50 at bottom */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/75 to-transparent" />
-
-                    {/* Title anchored at bottom */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-base font-bold leading-snug text-zinc-900">
-                        {lesson.title}
-                      </h3>
-                      <p className="mt-1 text-xs font-medium text-zinc-500">
-                        {lesson.durationMinutes} min
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
+      <main>
+        {/* ── Header ── */}
+        <header className={`relative border-b-2 border-zinc-950 ${theme.panel}`}>
+          <div aria-hidden="true"
+            className="absolute inset-0 bg-[radial-gradient(rgba(9,9,11,0.18)_1px,transparent_1px)] [background-size:22px_22px] opacity-50" />
+          <div className="relative mx-auto max-w-6xl px-6 py-14 lg:py-16">
+            <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-2 text-sm font-medium text-zinc-700">
+              <Link href="/topics" className="hover:text-zinc-950 hover:underline">Topics</Link>
+              <span aria-hidden="true">/</span>
+              <span className="text-zinc-950">{topic.title}</span>
+            </nav>
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+              <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl border-2 border-zinc-950 bg-white shadow-[4px_4px_0_0_#09090b]">
+                <TopicMark id={topic.id} className="h-16 w-16" />
+              </span>
+              <div>
+                <h1 className="font-display text-5xl font-extrabold leading-none tracking-[-0.035em] sm:text-7xl">{topic.title}</h1>
+                <p className="mt-3 max-w-2xl text-lg text-zinc-800">{topic.description}</p>
+              </div>
+            </div>
+            <div className="mt-7 flex flex-wrap gap-2">
+              {count ? (
+                <>
+                  <Sticker className="bg-white">{count} {count === 1 ? "lesson" : "lessons"}</Sticker>
+                  <Sticker className={theme.sticker} tilt="rotate-1">~{minutes} min total</Sticker>
+                </>
+              ) : (
+                <Sticker className="bg-amber-300">In development</Sticker>
+              )}
             </div>
           </div>
-        ) : (
-          <div className="rounded-2xl border-2 border-dashed border-zinc-200 p-10 text-center">
-            <div className="text-4xl mb-4">🔬</div>
-            <p className="text-zinc-500 text-sm">
-              Interactive lessons for {topic.title} are being built.
-              <br />
-              Check back soon.
-            </p>
-            <Link
-              href="/"
-              className="mt-6 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-600 transition-colors"
-            >
-              Back to Home
-            </Link>
-          </div>
-        )}
+        </header>
+
+        <div className="mx-auto max-w-6xl px-6 py-14 lg:py-20">
+          {count > 0 ? (
+            <>
+              <h2 className="font-display text-3xl font-extrabold tracking-tight">Lessons</h2>
+              <ol className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {topic.lessons.map((lesson, i) => {
+                  const Emblem = LESSON_EMBLEMS[lesson.id];
+                  return (
+                    <li key={lesson.id}>
+                      <Link href={`/topics/${topic.id}/${lesson.slug}`}
+                        className="group flex h-full flex-col overflow-hidden rounded-3xl border-2 border-zinc-950 bg-white shadow-[4px_4px_0_0_#09090b] transition-all hover:-translate-y-1 hover:shadow-[6px_8px_0_0_#09090b]">
+                        <div className={`relative aspect-[16/10] overflow-hidden border-b-2 border-zinc-950 ${theme.soft}`}>
+                          {Emblem && (
+                            <div className="absolute inset-x-10 top-5 bottom-0 transition-transform duration-500 group-hover:scale-110">
+                              <Emblem className="h-full w-full" />
+                            </div>
+                          )}
+                          <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border-2 border-zinc-950 bg-white font-display text-sm font-extrabold">
+                            {i + 1}
+                          </span>
+                        </div>
+                        <div className="flex flex-1 flex-col p-5">
+                          <h3 className="font-display text-xl font-bold tracking-tight">{lesson.title}</h3>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-zinc-600">
+                            <span className={`rounded-full border-2 border-zinc-950 px-2 py-0.5 text-zinc-950 ${theme.sticker}`}>{lesson.format}</span>
+                            <span>{lesson.durationMinutes} min</span>
+                          </div>
+                          <span className="mt-auto pt-5 text-sm font-bold">
+                            Start lesson <span aria-hidden="true" className="inline-block transition-transform group-hover:translate-x-1">→</span>
+                          </span>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
+            </>
+          ) : (
+            <div className="mx-auto max-w-xl rounded-3xl border-2 border-dashed border-zinc-950 bg-white p-10 text-center">
+              <span className="mx-auto flex h-20 w-20 -rotate-6 items-center justify-center rounded-3xl border-2 border-zinc-950 bg-amber-200 shadow-[3px_3px_0_0_#09090b]">
+                <TopicMark id={topic.id} className="h-14 w-14" />
+              </span>
+              <h2 className="mt-6 font-display text-3xl font-extrabold tracking-tight">Lessons are growing here</h2>
+              <p className="mt-3 text-zinc-600">
+                We&apos;re building interactive {topic.title.toLowerCase()}{" "}lessons right now. In the meantime,
+                there&apos;s plenty to explore in the other topics.
+              </p>
+              <div className="mt-7">
+                <ButtonLink href="/topics">Browse other topics <span aria-hidden="true">→</span></ButtonLink>
+              </div>
+            </div>
+          )}
+
+          {/* ── Roadmap ── */}
+          <section className="mt-16" aria-labelledby="coming-next">
+            <h2 id="coming-next" className="font-display text-2xl font-extrabold tracking-tight">
+              {count ? "Coming next" : "What we're building"}
+            </h2>
+            <ul className="mt-5 grid gap-3 sm:grid-cols-3">
+              {topic.upcoming.map((u, i) => (
+                <li key={u} className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-zinc-300 p-4">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-zinc-400 font-display text-sm font-bold text-zinc-500">
+                    {count + i + 1}
+                  </span>
+                  <span className="text-sm font-semibold text-zinc-600">{u}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }
