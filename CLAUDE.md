@@ -121,7 +121,7 @@ Every lesson must follow the pattern established by Mitosis, Meiosis, and Organe
 - Mobile-first responsive layout
 - Accessible: all interactive diagrams need keyboard nav and ARIA labels
 - Visualizations should work without JS as static fallbacks
-- Clean, scientific aesthetic — white space, subtle color, no gimmicks
+- Clean and scientifically accurate, but friendly: generous white space, a bright per-topic palette, and a sticker-style accent system (outlined buttons, offset shadows, highlighter swipes). Accents should stay purposeful, not decorative clutter.
 
 ## Environment variables
 See `.env.example` in the repo root for required variable names.
