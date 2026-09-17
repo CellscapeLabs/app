@@ -1,344 +1,346 @@
-"use client";
-
-import { useEffect } from "react";
 import Link from "next/link";
-import { motion, type Variants } from "framer-motion";
-import { CellIllustration } from "@/components/visualizations/CellIllustration";
-import { ExplodingTopicsSection } from "@/components/visualizations/ExplodingTopicsSection";
-import { VineDecoration } from "@/components/ui/VineDecoration";
-import { FloatingBioParticles } from "@/components/ui/FloatingBioParticles";
+import type { Metadata } from "next";
+import type React from "react";
+import { TOPICS } from "@/content/topics";
 import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
+import { LESSON_EMBLEMS } from "@/components/lessons/lessonEmblems";
+import { Reveal } from "@/components/home/Reveal";
+import { HeroCell } from "@/components/home/HeroCell";
+import { ExploreMockup, PredictMockup, ExperimentMockup } from "@/components/home/StepMockups";
 
-// ─── Animation variants ───────────────────────────────────────────────────────
-
-const EASE = "easeOut" as const;
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 44 },
-  show:   { opacity: 1, y: 0,  transition: { duration: 0.65, ease: EASE } },
+export const metadata: Metadata = {
+  title: "Cellscape — Biology you can take apart",
+  description:
+    "Interactive biology lessons, virtual labs, and simulations for AP and intro college students. Free, no sign-up, works on your phone.",
 };
 
-const staggerContainer: Variants = {
-  hidden: {},
-  show:   { transition: { staggerChildren: 0.13 } },
+// ─── Data ─────────────────────────────────────────────────────────────────────
+
+const LESSON_COUNT = TOPICS.reduce((n, t) => n + t.lessons.length, 0);
+const NEWEST = { title: "DNA Replication", href: "/topics/genetics/dna-replication" };
+
+const FORMATS = [
+  {
+    tag: "Virtual lab",
+    lesson: "photosynthesis",
+    title: "Photosynthesis",
+    href: "/topics/cell-biology/photosynthesis",
+    body: "Run the leaf disk assay. Change light, CO₂, and temperature, then graph what happens.",
+    tint: "bg-emerald-50",
+    tagClass: "bg-emerald-100 text-emerald-800",
+  },
+  {
+    tag: "What-if simulator",
+    lesson: "cellular-respiration",
+    title: "Cellular Respiration",
+    href: "/topics/cell-biology/cellular-respiration",
+    body: "Cut off oxygen or add cyanide and watch the whole pipeline jam.",
+    tint: "bg-amber-50",
+    tagClass: "bg-amber-100 text-amber-800",
+  },
+  {
+    tag: "Builder",
+    lesson: "meiosis",
+    title: "Meiosis",
+    href: "/topics/cell-biology/meiosis",
+    body: "Line up chromosomes, cross them over, and collect all 16 possible gametes.",
+    tint: "bg-violet-50",
+    tagClass: "bg-violet-100 text-violet-800",
+  },
+  {
+    tag: "Step-through",
+    lesson: "dna-replication",
+    title: "DNA Replication",
+    href: "/topics/genetics/dna-replication",
+    body: "Open a replication fork and predict each enzyme's next move.",
+    tint: "bg-sky-50",
+    tagClass: "bg-sky-100 text-sky-800",
+  },
+] as const;
+
+const STEPS = [
+  { n: "01", title: "Explore", body: "Drag, tap, and scrub through a process until you can see how the pieces fit.", Mockup: ExploreMockup },
+  { n: "02", title: "Predict", body: "Commit to an answer before the reveal — it's the fastest way to find what you don't know yet.", Mockup: PredictMockup },
+  { n: "03", title: "Experiment", body: "Change the conditions, run trials, and compare results like a real lab.", Mockup: ExperimentMockup },
+] as const;
+
+const TOPIC_ACCENT: Record<string, string> = {
+  "cell-biology": "text-emerald-700",
+  genetics: "text-violet-700",
+  ecosystems: "text-sky-700",
 };
 
-const cardVariant: Variants = {
-  hidden: { opacity: 0, y: 36, scale: 0.97 },
-  show:   { opacity: 1, y: 0,  scale: 1, transition: { duration: 0.55, ease: EASE } },
-};
+// ─── Small pieces ─────────────────────────────────────────────────────────────
 
-const viewportOpts = { once: true, margin: "-80px" };
-
-// ─── DNA separator ────────────────────────────────────────────────────────────
-
-function DnaSeparator() {
-  const RUNG_XS = [90, 180, 270, 360, 450, 540, 630, 720, 810, 900, 990, 1080, 1170, 1260, 1350];
+function Check() {
   return (
-    <div className="relative h-14 overflow-hidden pointer-events-none select-none" aria-hidden="true">
-      <svg viewBox="0 0 1440 56" className="absolute inset-0 h-full w-full" fill="none" preserveAspectRatio="none">
-        <path d="M 0 18 C 120 8 240 28 360 18 C 480 8 600 28 720 18 C 840 8 960 28 1080 18 C 1200 8 1320 28 1440 18"
-          stroke="#10b981" strokeWidth="1.5" opacity="0.28" />
-        <path d="M 0 38 C 120 48 240 28 360 38 C 480 48 600 28 720 38 C 840 48 960 28 1080 38 C 1200 48 1320 28 1440 38"
-          stroke="#8b5cf6" strokeWidth="1.5" opacity="0.28" />
-        {RUNG_XS.map((x, i) => (
-          <line key={x} x1={x} y1={i % 2 === 0 ? 20 : 24} x2={x} y2={i % 2 === 0 ? 36 : 32}
-            stroke={i % 2 === 0 ? "#10b981" : "#8b5cf6"} strokeWidth="1.2" opacity="0.35" />
-        ))}
-      </svg>
-    </div>
-  );
-}
-
-// ─── Floating atom decoration ─────────────────────────────────────────────────
-
-function AtomIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
-  return (
-    <svg viewBox="0 0 60 60" className={className} style={style} fill="none" aria-hidden="true">
-      <circle cx="30" cy="30" r="4" fill="currentColor" opacity="0.7" />
-      <ellipse cx="30" cy="30" rx="26" ry="10" stroke="currentColor" strokeWidth="1.2" opacity="0.4" />
-      <ellipse cx="30" cy="30" rx="26" ry="10" stroke="currentColor" strokeWidth="1.2" opacity="0.4"
-        transform="rotate(60 30 30)" />
-      <ellipse cx="30" cy="30" rx="26" ry="10" stroke="currentColor" strokeWidth="1.2" opacity="0.4"
-        transform="rotate(120 30 30)" />
+    <svg viewBox="0 0 16 16" className="h-4 w-4 text-emerald-600" fill="none" aria-hidden="true">
+      <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-
-const FEATURES = [
-  {
-    icon: "🔬",
-    title: "See Biology in Motion",
-    description:
-      "Watch mitosis unfold step by step, zoom into organelles, and manipulate 3D molecular structures — all in your browser.",
-    colorClasses: "bg-emerald-50 border-emerald-200",
-    glow: "rgba(16,185,129,0.08)",
-  },
-  {
-    icon: "🧪",
-    title: "Learn by Doing",
-    description:
-      "Run osmosis experiments, build food webs, and simulate DNA replication with hands-on virtual labs you control.",
-    colorClasses: "bg-violet-50 border-violet-200",
-    glow: "rgba(139,92,246,0.08)",
-  },
-  {
-    icon: "⚡",
-    title: "Actually Remember It",
-    description:
-      "Spaced repetition quizzes and visual progress tracking keep concepts fresh and build toward real mastery.",
-    colorClasses: "bg-orange-50 border-orange-200",
-    glow: "rgba(251,146,60,0.08)",
-  },
-] as const;
-
-const STATS = [
-  { value: "3",   label: "Topic Areas" },
-  { value: "15+", label: "Interactive Visualizations" },
-  { value: "∞",   label: "Lab Experiments" },
-] as const;
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return <div className="mb-3 text-sm font-semibold text-emerald-700">{children}</div>;
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  // Scroll to top on every mount so hero animations and the sticky
-  // card section always start from their initial state.
-  useEffect(() => { window.scrollTo(0, 0); }, []);
-
   return (
-    <div className="relative bg-white">
-      {/* Growing botanical vines — fixed, appear on xl+ screens */}
-      <VineDecoration side="left" />
-      <VineDecoration side="right" />
+    <div className="min-h-screen bg-white text-zinc-950">
 
-      {/* ── Navigation ── */}
-      <nav className="sticky top-0 z-50 border-b border-zinc-100 bg-white/90 backdrop-blur-sm">
+      {/* ── Nav ── */}
+      <nav className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
             <CellscapeIcon />
-            <span className="font-black text-zinc-900 tracking-tight">Cellscape</span>
+            <span className="text-[17px] font-bold tracking-tight">Cellscape</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/topics" className="hidden text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 sm:block">
-              Topics
-            </Link>
-            <Link href="/topics" className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-bold text-white shadow-md shadow-emerald-100 transition-all hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-200">
-              Start Free
+          <div className="flex items-center gap-7">
+            <Link href="#how-it-works" className="hidden text-sm text-zinc-600 transition-colors hover:text-zinc-950 sm:block">How it works</Link>
+            <Link href="#topics" className="hidden text-sm text-zinc-600 transition-colors hover:text-zinc-950 sm:block">Topics</Link>
+            <Link href="/topics"
+              className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800">
+              Start learning
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* ── Hero ── */}
-      <section className="relative mx-auto max-w-[1400px] px-6 pt-10 pb-10 lg:pt-16 lg:pb-6">
-        {/* Floating biology particles behind content */}
-        <FloatingBioParticles />
+      <main>
+        {/* ── Hero ── */}
+        <section className="relative overflow-hidden">
+          <div aria-hidden="true"
+            className="absolute inset-0 -z-10 bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_70%_65%_at_50%_35%,black,transparent)] opacity-70" />
 
-        {/* Subtle radial gradient backdrop */}
-        <div className="pointer-events-none absolute inset-0 -z-10"
-          style={{ background: "radial-gradient(ellipse 70% 60% at 70% 50%, rgba(16,185,129,0.06) 0%, transparent 70%), radial-gradient(ellipse 50% 50% at 20% 80%, rgba(139,92,246,0.05) 0%, transparent 70%)" }}
-        />
-
-        <div className="grid items-center gap-8 lg:grid-cols-[5fr_8fr] lg:gap-10">
-          {/* ── Hero copy ── */}
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={staggerContainer}
-            className="relative z-10"
-          >
-            <motion.h1 variants={fadeUp}
-              className="text-5xl font-black leading-[1.05] tracking-tight text-zinc-900 lg:text-6xl"
-            >
-              Biology{" "}
-              <span className="bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent">
-                clicks
-              </span>
-              <br />
-              when you can
-              <br />
-              see it{" "}
-              <span className="bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent">
-                move.
-              </span>
-            </motion.h1>
-
-            <motion.p variants={fadeUp}
-              className="mt-6 max-w-md text-lg leading-relaxed text-zinc-500"
-            >
-              Watch mitosis happen in real time. Build a food web. Simulate osmosis.
-              Biology makes sense when you can actually touch it.
-            </motion.p>
-
-            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
-              <Link href="/topics"
-                className="group relative rounded-full bg-emerald-500 px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-emerald-200 transition-all hover:bg-emerald-600 hover:shadow-2xl hover:shadow-emerald-200 hover:-translate-y-0.5"
-              >
-                Start Learning Free
-                <span className="ml-1.5 inline-block transition-transform group-hover:translate-x-1">→</span>
+          <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 pt-12 pb-16 lg:grid-cols-[1.05fr_1fr] lg:gap-6 lg:pt-20 lg:pb-24">
+            <Reveal>
+              <Link href={NEWEST.href}
+                className="group inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/80 py-1 pl-1 pr-3 text-xs text-zinc-600 shadow-sm transition-colors hover:border-zinc-300">
+                <span className="rounded-full bg-emerald-600 px-2 py-0.5 font-semibold text-white">New</span>
+                {NEWEST.title} lesson
+                <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
               </Link>
-              <Link href="/topics"
-                className="rounded-full border-2 border-zinc-200 px-7 py-3.5 text-sm font-bold text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50 hover:-translate-y-0.5"
-              >
-                Explore Topics
-              </Link>
-            </motion.div>
 
-            <motion.p variants={fadeUp} className="mt-5 text-xs text-zinc-400">
-              No account required · Works on any device
-            </motion.p>
-          </motion.div>
+              <h1 className="mt-6 text-[2.9rem] font-semibold leading-[1.02] tracking-[-0.045em] sm:text-6xl lg:text-7xl">
+                Biology you can<br />
+                <span className="text-emerald-600">take apart.</span>
+              </h1>
 
-          {/* ── Hero illustration ── */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 24 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.9, ease: "easeOut", delay: 0.1 }}
-            className="relative z-10"
-          >
-            {/* Gradient card behind cell */}
-            <div className="absolute inset-0 rounded-3xl"
-              style={{ background: "radial-gradient(ellipse at 60% 40%, rgba(16,185,129,0.12) 0%, transparent 60%), radial-gradient(ellipse at 30% 70%, rgba(139,92,246,0.1) 0%, transparent 60%), linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #faf5ff 100%)" }}
-            />
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-600">
+                Interactive lessons, virtual labs, and simulations for AP and intro college biology.
+                Run the experiment, break the pathway, build the cell — and see why it works.
+              </p>
 
-            {/* Decorative atom icons */}
-            <AtomIcon className="absolute -top-4 -right-4 w-10 h-10 text-emerald-400 opacity-60 animate-bio-float-2"
-              style={{ animationDuration: "8s", animationDelay: "1s" }}
-            />
-            <AtomIcon className="absolute -bottom-4 -left-4 w-8 h-8 text-violet-400 opacity-50 animate-bio-float-1"
-              style={{ animationDuration: "7s", animationDelay: "3s" }}
-            />
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Link href="/topics"
+                  className="group inline-flex items-center gap-2 rounded-full bg-zinc-950 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-zinc-950/10 transition-colors hover:bg-zinc-800">
+                  Start learning
+                  <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
+                </Link>
+                <Link href="/topics/cell-biology/photosynthesis"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-800 transition-colors hover:border-zinc-300 hover:bg-zinc-50">
+                  Try the leaf disk lab
+                </Link>
+              </div>
 
-            <Link
-              href="/topics/cell-biology/organelles"
-              className="relative block p-3 lg:p-5 rounded-2xl transition-all hover:ring-2 hover:ring-emerald-400/50 hover:ring-offset-2 cursor-pointer group"
-              aria-label="Explore cell organelles — interactive lesson"
-            >
-              <CellIllustration />
-              <span className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900/80 px-3 py-1 text-xs font-semibold text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                Explore organelles →
-              </span>
-            </Link>
+              <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-600">
+                <li className="flex items-center gap-1.5"><Check />{LESSON_COUNT} interactive lessons</li>
+                <li className="flex items-center gap-1.5"><Check />Free, no sign-up</li>
+                <li className="flex items-center gap-1.5"><Check />Works on your phone</li>
+              </ul>
+            </Reveal>
 
-          </motion.div>
-        </div>
-      </section>
+            <Reveal delay={0.15}>
+              <HeroCell />
+            </Reveal>
+          </div>
+        </section>
 
-      {/* ── DNA separator ── */}
-      <DnaSeparator />
+        {/* ── Lesson formats ── */}
+        <section id="formats" className="scroll-mt-16 border-y border-zinc-200/70 bg-zinc-50">
+          <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+            <Reveal className="max-w-3xl">
+              <Eyebrow>Not another slideshow</Eyebrow>
+              <h2 className="text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">Every lesson is something you do.</h2>
+              <p className="mt-4 text-lg leading-relaxed text-zinc-600">
+                Some lessons are labs. Some are simulations you can break. Some you build with your
+                own hands. The ideas stick because you tested them.
+              </p>
+            </Reveal>
 
-      {/* ── Stats bar ── */}
-      <motion.section
-        initial="hidden"
-        whileInView="show"
-        viewport={viewportOpts}
-        variants={fadeUp}
-        className="border-y border-zinc-100 bg-gradient-to-r from-zinc-50 via-white to-zinc-50"
-      >
-        <div className="mx-auto max-w-6xl px-6 py-8">
-          <motion.div variants={staggerContainer} className="flex flex-wrap justify-center gap-10 text-center lg:gap-20">
-            {STATS.map(({ value, label }) => (
-              <motion.div key={label} variants={cardVariant}>
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-400 bg-clip-text text-5xl font-black text-transparent">
-                  {value}
-                </div>
-                <div className="mt-1 text-sm font-medium text-zinc-500">{label}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </motion.section>
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {FORMATS.map((f, i) => {
+                const Emblem = LESSON_EMBLEMS[f.lesson];
+                return (
+                  <Reveal key={f.title} delay={i * 0.06} className="h-full">
+                    <Link href={f.href}
+                      className="group flex h-full flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white transition-all hover:-translate-y-1 hover:border-zinc-300 hover:shadow-xl hover:shadow-zinc-900/[0.06]">
+                      <div className={`relative aspect-[4/3] overflow-hidden ${f.tint}`}>
+                        {Emblem && (
+                          <div className="absolute inset-x-6 top-5 bottom-0 transition-transform duration-500 group-hover:scale-105">
+                            <Emblem className="h-full w-full" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-1 flex-col p-5">
+                        <span className={`self-start rounded-full px-2.5 py-0.5 text-xs font-semibold ${f.tagClass}`}>{f.tag}</span>
+                        <h3 className="mt-3 text-lg font-semibold tracking-tight">{f.title}</h3>
+                        <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">{f.body}</p>
+                        <span className="mt-auto pt-4 text-sm font-semibold text-zinc-950">
+                          Open lesson <span aria-hidden="true" className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
+                        </span>
+                      </div>
+                    </Link>
+                  </Reveal>
+                );
+              })}
+            </div>
+          </div>
+        </section>
 
-      {/* ── Features ── */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={viewportOpts}
-          variants={staggerContainer}
-        >
-          <motion.div variants={fadeUp} className="mb-14 text-center">
-            <h2 className="text-4xl font-black tracking-tight text-zinc-900">Why Cellscape?</h2>
-            <p className="mt-3 text-zinc-500">Built for the way visual learners actually learn.</p>
-          </motion.div>
+        {/* ── How a lesson works ── */}
+        <section id="how-it-works" className="scroll-mt-16">
+          <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+            <Reveal className="max-w-2xl">
+              <Eyebrow>How a lesson works</Eyebrow>
+              <h2 className="text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">Explore. Predict. Experiment.</h2>
+              <p className="mt-4 text-lg leading-relaxed text-zinc-600">
+                Built around how learning actually sticks: hands on the model, a guess before the
+                answer, and a chance to test your idea.
+              </p>
+            </Reveal>
 
-          <motion.div variants={staggerContainer} className="grid gap-6 md:grid-cols-3">
-            {FEATURES.map(({ icon, title, description, colorClasses, glow }) => (
-              <motion.div
-                key={title}
-                variants={cardVariant}
-                whileHover={{ y: -6, boxShadow: `0 20px 40px ${glow}` }}
-                className={`rounded-3xl border-2 p-8 transition-colors ${colorClasses} cursor-default`}
-              >
-                <div className="mb-4 text-4xl">{icon}</div>
-                <h3 className="mb-2 text-lg font-bold text-zinc-900">{title}</h3>
-                <p className="text-sm leading-relaxed text-zinc-600">{description}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-      </section>
+            <ol className="mt-12 grid gap-4 md:grid-cols-3">
+              {STEPS.map(({ n, title, body, Mockup }, i) => (
+                <Reveal key={n} delay={i * 0.08} className="h-full">
+                  <li className="flex h-full flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white">
+                    <div className="h-40 border-b border-zinc-100 bg-gradient-to-b from-zinc-50 to-white">
+                      <Mockup />
+                    </div>
+                    <div className="p-6">
+                      <div className="font-mono text-xs font-semibold text-emerald-700">{n}</div>
+                      <h3 className="mt-1 text-xl font-semibold tracking-tight">{title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-zinc-600">{body}</p>
+                    </div>
+                  </li>
+                </Reveal>
+              ))}
+            </ol>
+          </div>
+        </section>
 
-      {/* ── Exploding topics — pinned scroll reveals cards outward ── */}
-      <ExplodingTopicsSection />
+        {/* ── Topics ── */}
+        <section id="topics" className="scroll-mt-16 border-t border-zinc-200/70 bg-zinc-50">
+          <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+            <Reveal className="flex flex-wrap items-end justify-between gap-4">
+              <div className="max-w-2xl">
+                <Eyebrow>Topics</Eyebrow>
+                <h2 className="text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">Pick where your class is.</h2>
+              </div>
+              <Link href="/topics" className="text-sm font-semibold text-zinc-950 hover:underline">All topics →</Link>
+            </Reveal>
 
-      {/* ── Final CTA ── */}
-      <motion.section
-        initial="hidden"
-        whileInView="show"
-        viewport={viewportOpts}
-        variants={fadeUp}
-        className="relative overflow-hidden py-16 text-center"
-      >
-        {/* Background gradient blob */}
-        <div className="pointer-events-none absolute inset-0 -z-10"
-          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(16,185,129,0.08) 0%, transparent 70%)" }}
-        />
+            <div className="mt-12 grid gap-4 md:grid-cols-3">
+              {TOPICS.map((topic, i) => {
+                const count = topic.lessons.length;
+                const available = count > 0;
+                const card = (
+                  <div className={`flex h-full flex-col rounded-3xl border bg-white p-6 transition-all ${
+                    available ? "border-zinc-200 group-hover:-translate-y-1 group-hover:border-zinc-300 group-hover:shadow-xl group-hover:shadow-zinc-900/[0.06]" : "border-dashed border-zinc-300 bg-white/60"
+                  }`}>
+                    <div className="flex h-16 items-center gap-2">
+                      {available ? topic.lessons.slice(0, 3).map((lesson) => {
+                        const Emblem = LESSON_EMBLEMS[lesson.id];
+                        return (
+                          <span key={lesson.id} className="relative h-16 w-16 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50">
+                            {Emblem && <span className="absolute inset-x-1.5 top-2 bottom-0"><Emblem className="h-full w-full" /></span>}
+                          </span>
+                        );
+                      }) : (
+                        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-500">In development</span>
+                      )}
+                    </div>
+                    <h3 className={`mt-5 text-xl font-semibold tracking-tight ${available ? "" : "text-zinc-500"}`}>{topic.title}</h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">{topic.description}</p>
+                    <div className={`mt-auto pt-5 text-sm font-semibold ${available ? TOPIC_ACCENT[topic.id] ?? "text-zinc-950" : "text-zinc-400"}`}>
+                      {available ? <>{count} {count === 1 ? "lesson" : "lessons"} <span aria-hidden="true">→</span></> : "Coming soon"}
+                    </div>
+                  </div>
+                );
+                return (
+                  <Reveal key={topic.id} delay={i * 0.06} className="h-full">
+                    {available ? (
+                      <Link href={`/topics/${topic.id}`} className="group block h-full rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+                        {card}
+                      </Link>
+                    ) : card}
+                  </Reveal>
+                );
+              })}
+            </div>
+          </div>
+        </section>
 
-        {/* Decorative atoms */}
-        <AtomIcon className="absolute left-8 top-8 w-16 h-16 text-emerald-300 opacity-40 animate-bio-float-1"
-          style={{ animationDuration: "9s" }}
-        />
-        <AtomIcon className="absolute right-8 bottom-8 w-12 h-12 text-violet-300 opacity-40 animate-bio-float-3"
-          style={{ animationDuration: "7s", animationDelay: "2s" }}
-        />
-
-        <div className="mx-auto max-w-4xl px-6">
-          <h2 className="text-5xl font-black tracking-tight text-zinc-900 lg:text-6xl">
-            Ready to actually
-            <br />
-            <span className="bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent">
-              get it?
-            </span>
-          </h2>
-          <p className="mx-auto mt-5 max-w-sm text-lg text-zinc-500">
-            Every concept is something you can drag, break, and put back together.
-          </p>
-          <motion.div
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.97 }}
-            className="mt-10 inline-block"
-          >
-            <Link href="/topics"
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-10 py-4 text-base font-bold text-white shadow-2xl shadow-emerald-200 transition-colors hover:bg-emerald-600"
-            >
-              Start Learning Free →
-            </Link>
-          </motion.div>
-          <p className="mt-4 text-xs text-zinc-400">Free · No account needed · Works on mobile</p>
-        </div>
-      </motion.section>
+        {/* ── Closing CTA ── */}
+        <section className="px-6 py-20 lg:py-28">
+          <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-zinc-950 px-8 py-16 text-center sm:px-16 lg:py-20">
+            <div aria-hidden="true" className="absolute left-1/2 top-0 h-64 w-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/25 blur-3xl" />
+            <div aria-hidden="true"
+              className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_60%_70%_at_50%_0%,black,transparent)]" />
+            <div className="relative">
+              <h2 className="text-4xl font-semibold tracking-[-0.035em] text-white sm:text-5xl">Start with one lesson.</h2>
+              <p className="mx-auto mt-4 max-w-md text-lg text-zinc-400">
+                Free, no sign-up, and it works on the phone in your pocket.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Link href="/topics"
+                  className="group inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-zinc-200">
+                  Browse lessons
+                  <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
+                </Link>
+                <Link href="/topics/cell-biology/meiosis"
+                  className="rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+                  Try the gamete builder
+                </Link>
+              </div>
+            </div>
+          </Reveal>
+        </section>
+      </main>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-zinc-100 py-8">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 text-sm">
-          <div className="flex items-center gap-2">
-            <CellscapeIcon className="h-6 w-6 shadow-none" />
-            <span className="font-black tracking-tight text-zinc-800">Cellscape</span>
+      <footer className="border-t border-zinc-200/70">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-12 sm:grid-cols-[2fr_1fr_1fr]">
+          <div>
+            <Link href="/" className="flex items-center gap-2.5">
+              <CellscapeIcon className="h-7 w-7" />
+              <span className="font-bold tracking-tight">Cellscape</span>
+            </Link>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
+              Interactive biology for AP and intro college students.
+            </p>
           </div>
-          <span className="text-zinc-400">Interactive biology for everyone.</span>
+          <div>
+            <h3 className="text-sm font-semibold">Topics</h3>
+            <ul className="mt-3 space-y-2 text-sm text-zinc-500">
+              {TOPICS.map((t) => (
+                <li key={t.id}><Link href={`/topics/${t.id}`} className="transition-colors hover:text-zinc-950">{t.title}</Link></li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold">Try a lesson</h3>
+            <ul className="mt-3 space-y-2 text-sm text-zinc-500">
+              {FORMATS.map((f) => (
+                <li key={f.href}><Link href={f.href} className="transition-colors hover:text-zinc-950">{f.title}</Link></li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-zinc-200/70">
+          <div className="mx-auto max-w-6xl px-6 py-5 text-xs text-zinc-400">© 2026 Cellscape</div>
         </div>
       </footer>
     </div>

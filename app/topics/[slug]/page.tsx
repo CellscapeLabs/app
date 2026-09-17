@@ -2,29 +2,7 @@ import Link from "next/link";
 import { TOPICS } from "@/content/topics";
 import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
 import { notFound } from "next/navigation";
-import { MitosisEmblem } from "@/components/visualizations/MitosisAnimation";
-import { MeiosisEmblem } from "@/components/visualizations/MeiosisAnimation";
-import { OrganelleEmblem } from "@/components/visualizations/OrganellesVisualization";
-import { CellMembraneEmblem } from "@/components/visualizations/CellMembraneVisualization";
-import { OsmosisEmblem } from "@/components/visualizations/OsmosisSimulator";
-import { CellularRespirationEmblem } from "@/components/visualizations/CellularRespirationVisualization";
-import { PhotosynthesisEmblem } from "@/components/visualizations/PhotosynthesisVisualization";
-import { DnaStructureEmblem } from "@/components/visualizations/DnaStructureVisualization";
-import { DnaReplicationEmblem } from "@/components/visualizations/DnaReplicationVisualization";
-import type React from "react";
-
-// Add an emblem here for each new lesson as it's built
-const EMBLEMS: Record<string, React.ComponentType<{ className?: string }>> = {
-  mitosis: MitosisEmblem,
-  meiosis: MeiosisEmblem,
-  organelles: OrganelleEmblem,
-  "cell-membrane": CellMembraneEmblem,
-  osmosis: OsmosisEmblem,
-  "cellular-respiration": CellularRespirationEmblem,
-  photosynthesis: PhotosynthesisEmblem,
-  "dna-structure": DnaStructureEmblem,
-  "dna-replication": DnaReplicationEmblem,
-};
+import { LESSON_EMBLEMS as EMBLEMS } from "@/components/lessons/lessonEmblems";
 
 interface Props { params: Promise<{ slug: string }> }
 

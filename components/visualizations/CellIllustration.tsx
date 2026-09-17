@@ -25,6 +25,10 @@ export const CELL_COLORS = {
 
 const C = CELL_COLORS;
 
+// Trig output can differ in its last bit between Node and the browser, which breaks hydration.
+// Rounding every trig-derived coordinate keeps the server and client markup identical.
+function q(n: number) { return Math.round(n * 100) / 100; }
+
 // ─── Nucleus ──────────────────────────────────────────────────────────────────
 // Double nuclear envelope (outer + inner membrane), 12 nuclear pore complexes,
 // nuclear lamina, heterochromatin blobs, tripartite nucleolus, chromatin loops.
@@ -46,8 +50,8 @@ export function NucleusGroup({ cx = 0, cy = 0, r = 85, glowClass = "" }: Nucleus
       {/* Nuclear pore complexes — outer ring + inner ring */}
       {PORE_ANGLES.map((a) => {
         const rad = (a * Math.PI) / 180;
-        const ox = r  * Math.cos(rad), oy = r  * Math.sin(rad);
-        const ix = ri * Math.cos(rad), iy = ri * Math.sin(rad);
+        const ox = q(r  * Math.cos(rad)), oy = q(r  * Math.sin(rad));
+        const ix = q(ri * Math.cos(rad)), iy = q(ri * Math.sin(rad));
         return (
           <g key={a}>
             <circle cx={ox} cy={oy} r="4.5" fill={C.nucleus} opacity="0.52" />
@@ -286,8 +290,8 @@ export function CentrosomeGroup({ cx = 0, cy = 0 }: { cx?: number; cy?: number }
         const rad = (a * Math.PI) / 180;
         return (
           <line key={a}
-            x1={-7 + 3.5 * Math.cos(rad)} y1={3.5 * Math.sin(rad)}
-            x2={-7 + 7   * Math.cos(rad)} y2={7   * Math.sin(rad)}
+            x1={q(-7 + 3.5 * Math.cos(rad))} y1={q(3.5 * Math.sin(rad))}
+            x2={q(-7 + 7   * Math.cos(rad))} y2={q(7   * Math.sin(rad))}
             stroke={C.centrosome} strokeWidth="0.8" opacity="0.52" />
         );
       })}
@@ -408,7 +412,8 @@ const FREE_RIBOSOMES: [number, number][] = [
 
 // ─── Full cell illustration ───────────────────────────────────────────────────
 
-export function CellIllustration() {
+/** Full animal cell. `labels={false}` drops the leader-line labels and crops tightly to the cell. */
+export function CellIllustration({ labels = true }: { labels?: boolean }) {
   // Microtubule vectors: [x1, y1, x2, y2] from centrosome at (220, 125)
   const microtubules: [number, number, number, number][] = [
     [220, 125, 144, 246], [220, 125, 246, 152], [220, 125, 148, 194],
@@ -417,7 +422,7 @@ export function CellIllustration() {
   ];
 
   return (
-    <svg viewBox="-55 -55 590 590" className="w-full h-full animate-cell-glow" aria-hidden="true">
+    <svg viewBox={labels ? "-55 -55 590 590" : "24 24 432 432"} className="w-full h-full animate-cell-glow" aria-hidden="true">
       <defs>
         <radialGradient id="cellGlow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor={C.membrane} stopOpacity="0.22" />
@@ -503,7 +508,7 @@ export function CellIllustration() {
       <CentrosomeGroup cx={220} cy={125} />
 
       {/* ── Diagram labels with leader lines ── */}
-      {CELL_LABELS.map((label) => (
+      {labels && CELL_LABELS.map((label) => (
         <OrgLabel key={label.text} {...label} />
       ))}
     </svg>
