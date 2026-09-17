@@ -24,6 +24,7 @@ import {
 } from "framer-motion";
 import type React from "react";
 import { lerp, fadeLerp } from "@/lib/scrub";
+import { PredictionPrompt, type Prediction } from "@/components/lessons/PredictionPrompt";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -624,8 +625,50 @@ export function DnaReplicationViewer() {
 }
 
 // ─── DnaReplicationPanel ──────────────────────────────────────────────────────
+// ─── Predictions — asked on a stage, answered by the next one ────────────────
+const PREDICTIONS: Partial<Record<number, Prediction>> = {
+  0: {
+    question: "To copy DNA, the two strands have to come apart first. Which bonds get broken to unzip them?",
+    options: ["Covalent bonds in the sugar-phosphate backbone", "Hydrogen bonds between base pairs", "Peptide bonds"],
+    correct: 1,
+    explanation: "Helicase breaks the weak hydrogen bonds between bases. The strong backbone stays intact, so the sequence isn't damaged.",
+  },
+  1: {
+    question: "DNA polymerase can only add nucleotides to an existing 3′ end. What does it need before it can start?",
+    options: ["Nothing — it can start anywhere", "A short primer to build from", "A protein template"],
+    correct: 1,
+    explanation: "Primase lays down a short RNA primer, giving DNA polymerase the free 3′ end it needs.",
+  },
+  2: {
+    question: "New DNA is always built 5′ → 3′. On the top template, which way will the new strand grow?",
+    options: ["Toward the fork, continuously", "Away from the fork, in short pieces", "In both directions at once"],
+    correct: 0,
+    explanation: "On this template, 5′ → 3′ points toward the fork, so DNA polymerase III can follow helicase and build one continuous leading strand.",
+  },
+  3: {
+    question: "The bottom template runs the opposite way. How will its new strand be built?",
+    options: ["Continuously, toward the fork", "It won't be copied until later", "In short pieces, away from the fork"],
+    correct: 2,
+    explanation: "Building 5′ → 3′ here means moving away from the fork, so the lagging strand is made in short Okazaki fragments.",
+  },
+  4: {
+    question: "The lagging strand is now fragments with RNA primers between them. What still has to happen?",
+    options: ["Replace the RNA primers with DNA and seal the gaps", "Nothing — it's finished", "Remove the fragments and start over"],
+    correct: 0,
+    explanation: "DNA polymerase I swaps each RNA primer for DNA, and DNA ligase seals the nicks into one continuous strand.",
+  },
+  5: {
+    question: "When replication finishes, what is each new DNA molecule made of?",
+    options: ["Two brand-new strands", "Old and new pieces mixed along each strand", "One original strand and one new strand"],
+    correct: 2,
+    explanation: "Replication is semiconservative: each daughter molecule keeps one parent strand as its template partner.",
+  },
+};
+
 export function DnaReplicationPanel() {
   const { snapIdx, progressPct, cur, springTo } = useRepCtx();
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const prediction = PREDICTIONS[snapIdx];
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="p-5" style={{ background: cur.accentBg }}>
@@ -657,6 +700,11 @@ export function DnaReplicationPanel() {
             </li>
           ))}
         </ul>
+        {prediction && (
+          <PredictionPrompt key={snapIdx} {...prediction} selected={answers[snapIdx]}
+            onSelect={(i) => setAnswers((prev) => ({ ...prev, [snapIdx]: i }))}
+            onContinue={() => springTo(Math.min(STAGE_COUNT - 1, snapIdx + 1))} />
+        )}
       </div>
       <div className="border-t border-zinc-100 px-5 py-3">
         <div className="mb-2 h-1 w-full rounded-full bg-zinc-100">
