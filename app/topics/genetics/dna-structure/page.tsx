@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
+import { LessonProgress } from "@/components/lessons/LessonProgress";
 import {
   DnaStructureProvider,
   DnaStructureViewer,
@@ -48,6 +49,7 @@ export default function DnaStructurePage() {
             ← Genetics
           </Link>
         </div>
+        <LessonProgress color="violet" />
       </nav>
 
       <main className="mx-auto max-w-6xl px-6 pb-24">

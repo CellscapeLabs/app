@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CellscapeIcon } from "@/components/ui/CellscapeIcon";
+import { LessonProgress } from "@/components/lessons/LessonProgress";
 import {
   MeiosisProvider,
   MeiosisViewer,
@@ -48,6 +49,7 @@ export default function MeiosisPage() {
             ← Cell Biology
           </Link>
         </div>
+        <LessonProgress color="emerald" />
       </nav>
 
       <main className="mx-auto max-w-6xl px-6 pb-24">
