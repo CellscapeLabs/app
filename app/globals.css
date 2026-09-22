@@ -1,28 +1,32 @@
 @import "tailwindcss";
 
+/*
+ * Cellscape is a light-mode app, deliberately.
+ *
+ * globals.css used to declare a dark palette via prefers-color-scheme, but nothing
+ * implemented it: every page hardcodes `bg-white`, no component carried a `dark:`
+ * variant, and the ~11k lines of SVG in /components/visualizations use literal light
+ * fills. The result was a dark body behind white pages. A half-declared theme is worse
+ * than none, so the declaration is gone.
+ *
+ * Implementing dark mode for real means: theming the visualization palettes (start with
+ * CELL_COLORS in CellIllustration.tsx), swapping the hardcoded surfaces for the tokens
+ * in components/ui/tokens.ts, and re-checking contrast on the topic accents. Until then
+ * `color-scheme: light` keeps form controls and scrollbars consistent with the pages.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #ffffff;
+  color: #18181b;
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -89,13 +93,4 @@ body {
   .animate-cell-glow,
   .animate-nucleus-glow,
   .animate-organelle { animation: none; }
-}
-
-/* Endless horizontal ticker — content is duplicated so -50% loops seamlessly */
-@keyframes marquee {
-  to { transform: translateX(-50%); }
-}
-.animate-marquee { animation: marquee 40s linear infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .animate-marquee { animation: none; }
 }

@@ -10,7 +10,7 @@ export function PlaceholderViz({ label }: PlaceholderVizProps) {
     <div
       role="img"
       aria-label={label}
-      className="flex h-64 items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 text-sm text-zinc-400"
+      className="flex h-64 items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 text-sm text-zinc-600"
     >
       {label}
     </div>

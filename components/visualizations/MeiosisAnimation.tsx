@@ -8,9 +8,11 @@ import {
   animate,
   useMotionValue,
   useMotionValueEvent,
+  useReducedMotion,
   type AnimationPlaybackControls,
 } from "framer-motion";
 import type React from "react";
+import { VIZ_FRAME } from "@/components/visualizations/vizChrome";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -1021,10 +1023,13 @@ export function MeiosisProvider({ children }: { children: React.ReactNode }) {
   const [displayProgress, setDisplayProgress] = useState(0);
   useMotionValueEvent(progress, "change", setDisplayProgress);
   const animRef = useRef<AnimationPlaybackControls | null>(null);
+  // Springing between stages is decorative; reduced-motion users get the end state directly.
+  const reduceMotion = useReducedMotion();
   const [crossover, setCrossover] = useState<CrossoverPattern>(DEFAULT_CROSSOVER);
 
   function springTo(target: number) {
     animRef.current?.stop();
+    if (reduceMotion) { progress.set(target); return; }
     animRef.current = animate(progress, target, { type:"spring", stiffness:380, damping:30 });
   }
   function setProgressDirect(value: number) {
@@ -1094,7 +1099,7 @@ export function MeiosisViewer() {
   const mII = PHASES.slice(5);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
 
       {/* Division labels + phase tabs */}
       <div className="border-b border-zinc-100">
@@ -1107,7 +1112,7 @@ export function MeiosisViewer() {
             {mI.map((p, i) => (
               <button key={p.name} onClick={() => springTo(i)}
                 className={`py-2 text-[10px] font-semibold leading-tight px-1 transition-colors ${
-                  snapIdx === i ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50"
+                  snapIdx === i ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-700 hover:bg-zinc-50"
                 }`}>
                 {p.name}
               </button>
@@ -1123,7 +1128,7 @@ export function MeiosisViewer() {
             {mII.map((p, i) => (
               <button key={p.name} onClick={() => springTo(i + 5)}
                 className={`py-2 text-[10px] font-semibold leading-tight px-1 transition-colors ${
-                  snapIdx === i + 5 ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50"
+                  snapIdx === i + 5 ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-700 hover:bg-zinc-50"
                 }`}>
                 {p.name}
               </button>
@@ -1155,10 +1160,10 @@ export function MeiosisViewer() {
 
         {/* Crossing over button */}
         <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-4 py-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Crossing over</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Crossing over</span>
           <button
             onClick={randomizeCrossover}
-            className="flex items-center gap-1.5 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm transition-all hover:bg-violet-50 hover:border-violet-300 active:scale-95"
+            className="flex items-center gap-1.5 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-800 shadow-sm transition-all hover:border-zinc-900 hover:bg-zinc-50 active:scale-95"
           >
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <rect x="1" y="1" width="12" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
@@ -1172,11 +1177,11 @@ export function MeiosisViewer() {
 
         {/* Scrub bar */}
         <div className="border-t border-zinc-100 bg-white px-5 pt-4 pb-5">
-          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-zinc-400 select-none pointer-events-none">
+          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-zinc-600 select-none pointer-events-none">
             ← drag right to advance phases →
           </p>
           <div className="flex items-center gap-3">
-            <span className="w-14 shrink-0 text-right text-[10px] font-semibold text-zinc-400 select-none pointer-events-none leading-tight">
+            <span className="w-14 shrink-0 text-right text-[10px] font-semibold text-zinc-600 select-none pointer-events-none leading-tight">
               {PHASES[0].name}
             </span>
             <div className="relative flex-1 h-3 rounded-full bg-zinc-100"
@@ -1196,14 +1201,14 @@ export function MeiosisViewer() {
                 </svg>
               </div>
             </div>
-            <span className="w-14 shrink-0 text-[10px] font-semibold text-zinc-400 select-none pointer-events-none leading-tight">
+            <span className="w-14 shrink-0 text-[10px] font-semibold text-zinc-600 select-none pointer-events-none leading-tight">
               {PHASES[PHASE_COUNT-1].name}
             </span>
           </div>
           <div className="mt-2 flex justify-between px-[4.25rem]">
             {PHASES.map((_,i) => (
               <button key={i} onClick={() => springTo(i)}
-                className={`text-[10px] font-medium transition-colors ${snapIdx===i ? "text-zinc-700 font-bold" : "text-zinc-300 hover:text-zinc-500"}`}>
+                className={`text-[10px] font-medium transition-colors ${snapIdx===i ? "text-zinc-700 font-bold" : "text-zinc-300 hover:text-zinc-700"}`}>
                 {i+1}
               </button>
             ))}
@@ -1219,7 +1224,7 @@ export function MeiosisViewer() {
 export function MeiosisPanel() {
   const { snapIdx, progressPct, cur, springTo } = useMeiosis();
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="p-5" style={{ background: cur.accentBg }}>
         <div className="mb-1 text-[10px] font-bold uppercase tracking-widest"
           style={{ color: cur.accent }}>
@@ -1227,11 +1232,11 @@ export function MeiosisPanel() {
         </div>
         <div className="mb-3 flex items-start justify-between gap-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+            <span className="text-xs font-bold uppercase tracking-widest text-zinc-600">
               Phase {snapIdx+1} of {PHASE_COUNT}
             </span>
             <h3 className="mt-0.5 text-lg font-bold text-zinc-900">{cur.name}</h3>
-            <p className="text-sm text-zinc-500">{cur.subtitle}</p>
+            <p className="text-sm text-zinc-700">{cur.subtitle}</p>
           </div>
           <div className="flex shrink-0 gap-2">
             <button onClick={() => springTo(Math.max(0, snapIdx-1))} disabled={snapIdx===0}

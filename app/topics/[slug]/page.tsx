@@ -94,7 +94,7 @@ export default async function TopicPage({ params }: Props) {
                         <div className="flex flex-1 flex-col p-5">
                           <h3 className="font-display text-xl font-bold tracking-tight">{lesson.title}</h3>
                           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-zinc-600">
-                            <span className={`rounded-full border-2 border-zinc-950 px-2 py-0.5 text-zinc-950 ${theme.sticker}`}>{lesson.format}</span>
+                            <span className="rounded-full border-2 border-zinc-950 bg-white px-2 py-0.5 text-zinc-950">{lesson.format}</span>
                             <span>{lesson.durationMinutes} min</span>
                           </div>
                           <span className="mt-auto pt-5 text-sm font-bold">

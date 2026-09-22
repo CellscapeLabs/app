@@ -4,12 +4,10 @@
 
 import { useEffect, useState } from "react";
 
-const COLORS = {
-  emerald: "bg-emerald-500",
-  violet:  "bg-violet-600",
-} as const;
-
-export function LessonProgress({ color = "emerald" }: { color?: keyof typeof COLORS }) {
+export function LessonProgress({ fill = "bg-zinc-900" }: {
+  /** Tailwind background class for the fill — comes from the topic theme. */
+  fill?: string;
+}) {
   const [pct, setPct] = useState(0);
 
   useEffect(() => {
@@ -40,7 +38,7 @@ export function LessonProgress({ color = "emerald" }: { color?: keyof typeof COL
   return (
     <div className="absolute inset-x-0 bottom-0 h-1 bg-zinc-100" role="progressbar" aria-label="Lesson progress"
       aria-valuemin={0} aria-valuemax={100} aria-valuenow={rounded} aria-valuetext={`${rounded}% through the lesson`}>
-      <div className={`h-full ${COLORS[color]}`} style={{ width: `${pct}%` }} />
+      <div className={`h-full ${fill}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
