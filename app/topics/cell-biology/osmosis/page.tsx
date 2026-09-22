@@ -1,210 +1,107 @@
-import Link from "next/link";
-import type { Metadata } from "next";
-import { ScrollHint } from "@/components/lessons/ScrollHint";
-import { LessonNav } from "@/components/lessons/LessonNav";
+import { LessonLayout } from "@/components/lessons/LessonLayout";
+import { lessonMetadata } from "@/components/lessons/lessonMetadata";
+import { LessonSplit } from "@/components/lessons/LessonSplit";
+import {
+  Callout,
+  DataTable,
+  KeyConcepts,
+  QuickRecap,
+  type KeyConcept,
+} from "@/components/lessons/blocks";
 import {
   OsmosisViewer,
   OsmosisInfoPanel,
   OsmosisProvider,
 } from "@/components/visualizations/OsmosisSimulator";
 
-export const metadata: Metadata = {
-  title: "Osmosis & Diffusion — Cell Biology · Cellscape",
-  description:
-    "Simulate osmosis in real time. Adjust solute concentrations on both sides of a membrane and watch water molecules cross toward equilibrium.",
-};
+export const metadata = lessonMetadata(
+  "cell-biology",
+  "osmosis",
+  "Simulate osmosis in real time. Adjust solute concentrations on both sides of a membrane and watch water molecules cross toward equilibrium.",
+);
 
-const KEY_CONCEPTS = [
+const KEY_CONCEPTS: readonly KeyConcept[] = [
   {
-    icon: "⚖️",
+    icon: "balance",
     heading: "Equilibrium drives everything",
     body: "Neither diffusion nor osmosis requires a motor protein or ATP. The random collisions of molecules statistically push the system toward equal concentrations — thermodynamics does the work.",
   },
   {
-    icon: "🚫",
+    icon: "ban",
     heading: "Solute can't cross",
     body: "A semipermeable membrane is the key constraint. Most solutes cannot dissolve into the oily lipid bilayer core, so they are blocked. Only water molecules — helped by aquaporin protein channels — can cross freely, which is what makes osmosis possible.",
   },
   {
-    icon: "💧",
+    icon: "droplet",
     heading: "Water follows solute",
     body: "Counter-intuitive but true: water moves toward higher solute concentration. Adding solute to water dilutes it — so the high-solute side is actually the low-water-concentration side. Water diffuses down its own gradient toward the solute, not the other way around.",
   },
+];
+
+const COMPARISON_ROWS = [
+  ["What moves", "Any molecule", "Water only"],
+  ["Membrane needed", "No", "Yes (semipermeable)"],
+  ["Energy cost", "None (passive)", "None (passive)"],
+  ["Direction", "High → low conc.", "Water moves toward high-solute side"],
+  ["Stops when", "Concentrations equal", "Osmotic pressure balances"],
+] as const;
+
+const RECAP = [
+  ["Diffusion", "Net movement of molecules from high to low concentration — driven by random molecular motion, no energy needed."],
+  ["Osmosis", "Diffusion of water across a semipermeable membrane toward the side with higher solute concentration."],
+  ["Aquaporins", "Protein channels that allow water to cross the membrane ~1 billion molecules per second — much faster than simple diffusion."],
+  ["Tonicity", "Describes a solution relative to a cell: hypotonic (cell swells), isotonic (no change), hypertonic (cell shrinks)."],
+  ["Osmotic pressure", "The hydrostatic pressure that exactly counteracts osmosis — higher solute concentration = higher osmotic pressure."],
 ] as const;
 
 export default function OsmosisPage() {
   return (
-    <div className="min-h-screen bg-white">
-
-      {/* ── Nav ── */}
-      <LessonNav topic="cell-biology" />
-      <ScrollHint />
-
-      <main className="mx-auto max-w-6xl px-6 pb-24">
-
-        {/* ── Breadcrumb ── */}
-        <nav
-          className="flex items-center gap-1.5 pt-8 pb-6 text-xs text-zinc-400"
-          aria-label="Breadcrumb"
+    <LessonLayout
+      topicId="cell-biology"
+      lessonId="osmosis"
+      intro={
+        <>
+          Molecules never stop moving — and that restlessness drives all of chemistry and life.
+          Adjust the sliders to see how concentration gradients push molecules toward equilibrium,
+          and what happens to a cell when you change its surroundings.
+        </>
+      }
+    >
+      <OsmosisProvider>
+        <LessonSplit
+          viewer={<OsmosisViewer />}
+          caption="Drag the sliders — watch molecules respond in real time"
         >
-          <Link href="/topics" className="transition-colors hover:text-zinc-600">Topics</Link>
-          <span>/</span>
-          <Link href="/topics/cell-biology" className="transition-colors hover:text-zinc-600">Cell Biology</Link>
-          <span>/</span>
-          <span className="font-medium text-zinc-600">Osmosis & Diffusion</span>
-        </nav>
+          <OsmosisInfoPanel />
 
-        {/* ── Lesson header ── */}
-        <div className="mb-10">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-              Cell Biology
-            </span>
-            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-600">
-              Simulator
-            </span>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-500">
-              15 min
-            </span>
-          </div>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight text-zinc-900 lg:text-5xl">
-            Osmosis & Diffusion
-          </h1>
-          <p className="mt-3 max-w-2xl text-lg leading-relaxed text-zinc-500">
-            Molecules never stop moving — and that restlessness drives all of chemistry and life.
-            Adjust the sliders to see how concentration gradients push molecules toward equilibrium,
-            and what happens to a cell when you change its surroundings.
-          </p>
-        </div>
+          <KeyConcepts
+            title="Three things to keep straight"
+            items={KEY_CONCEPTS}
+          />
 
-        {/* ── Two-column interactive section ── */}
-        <OsmosisProvider>
-        <div className="lg:grid lg:grid-cols-[5fr_7fr] lg:items-start lg:gap-8">
+          <DataTable
+            title="Diffusion vs. osmosis"
+            columns={[
+              { header: "Property" },
+              { header: "Diffusion" },
+              { header: "Osmosis" },
+            ]}
+            rows={COMPARISON_ROWS}
+          />
 
-          {/* Left column — sticky simulator */}
-          <div className="mb-6 lg:sticky lg:top-24 lg:mb-0">
-            <OsmosisViewer />
-            <p className="mt-2 text-center text-xs text-zinc-400">
-              Drag the sliders — watch molecules respond in real time
-            </p>
-          </div>
+          <Callout tone="clinical" title="When osmosis goes wrong">
+            IV fluids must be isotonic (~0.9% NaCl) or cells suffer immediately.
+            A hypotonic drip swells red blood cells until they burst (hemolysis).
+            A hypertonic drip shrinks them — dangerously reducing their flexibility.
+            Cholera toxin forces chloride channels open, pulling water out of intestinal
+            cells by osmosis, causing the catastrophic dehydration that kills within hours.
+            Cryopreservation of cells uses cryoprotectants that match the internal osmolarity
+            so cells don&apos;t shatter when frozen.
+          </Callout>
 
-          {/* Right column — scrollable content */}
-          <div className="space-y-6">
-
-            {/* Concept info panel — auto-syncs with the active simulator tab */}
-            <OsmosisInfoPanel />
-
-            {/* Key concepts */}
-            <section>
-              <h2 className="mb-3 text-xl font-bold tracking-tight text-zinc-900">
-                Three things to keep straight
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {KEY_CONCEPTS.map(({ icon, heading, body }) => (
-                  <div key={heading} className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-                    <div className="mb-2 text-2xl">{icon}</div>
-                    <h3 className="mb-1 text-sm font-bold text-zinc-900">{heading}</h3>
-                    <p className="text-xs leading-relaxed text-zinc-500">{body}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* Comparison table */}
-            <section>
-              <h2 className="mb-4 text-xl font-bold tracking-tight text-zinc-900">
-                Diffusion vs. Osmosis
-              </h2>
-              <div className="overflow-hidden rounded-xl border border-zinc-100">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      <th className="px-4 py-3">Property</th>
-                      <th className="px-4 py-3">Diffusion</th>
-                      <th className="px-4 py-3">Osmosis</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100">
-                    {[
-                      ["What moves",     "Any molecule",          "Water only"],
-                      ["Membrane needed","No",                    "Yes (semipermeable)"],
-                      ["Energy cost",    "None (passive)",        "None (passive)"],
-                      ["Direction",      "High → low conc.",      "Water moves toward high-solute side"],
-                      ["Stops when",     "Concentrations equal",  "Osmotic pressure balances"],
-                    ].map(([prop, diff, osm]) => (
-                      <tr key={prop} className="bg-white transition-colors hover:bg-zinc-50">
-                        <td className="px-4 py-3 font-medium text-zinc-900">{prop}</td>
-                        <td className="px-4 py-3 text-zinc-500">{diff}</td>
-                        <td className="px-4 py-3 text-zinc-500">{osm}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            {/* Clinical connection */}
-            <section className="rounded-xl border-l-4 border-rose-400 bg-rose-50 px-6 py-5">
-              <h2 className="mb-2 text-base font-bold text-zinc-900">
-                When osmosis goes wrong
-              </h2>
-              <p className="text-sm leading-relaxed text-zinc-600">
-                IV fluids must be isotonic (~0.9% NaCl) or cells suffer immediately.
-                A hypotonic drip swells red blood cells until they burst (hemolysis).
-                A hypertonic drip shrinks them — dangerously reducing their flexibility.
-                Cholera toxin forces chloride channels open, pulling water out of intestinal
-                cells by osmosis, causing the catastrophic dehydration that kills within hours.
-                Cryopreservation of cells uses cryoprotectants that match the internal osmolarity
-                so cells don&apos;t shatter when frozen.
-              </p>
-            </section>
-
-            {/* Quick recap */}
-            <section>
-              <h2 className="mb-4 text-xl font-bold tracking-tight text-zinc-900">Quick recap</h2>
-              <ol className="space-y-2.5">
-                {[
-                  ["Diffusion",       "Net movement of molecules from high to low concentration — driven by random molecular motion, no energy needed."],
-                  ["Osmosis",         "Diffusion of water across a semipermeable membrane toward the side with higher solute concentration."],
-                  ["Aquaporins",      "Protein channels that allow water to cross the membrane ~1 billion molecules per second — much faster than simple diffusion."],
-                  ["Tonicity",        "Describes a solution relative to a cell: hypotonic (cell swells), isotonic (no change), hypertonic (cell shrinks)."],
-                  ["Osmotic pressure","The hydrostatic pressure that exactly counteracts osmosis — higher solute concentration = higher osmotic pressure."],
-                ].map(([term, desc], i) => (
-                  <li key={term} className="flex items-start gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-[11px] font-bold text-white">
-                      {i + 1}
-                    </span>
-                    <div className="pt-0.5">
-                      <span className="text-sm font-semibold text-zinc-900">{term} — </span>
-                      <span className="text-sm text-zinc-500">{desc}</span>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </section>
-
-            {/* Footer nav */}
-            <div className="flex items-center justify-between border-t border-zinc-100 pt-6">
-              <Link
-                href="/topics/cell-biology/cell-membrane"
-                className="rounded-full border-2 border-zinc-200 px-6 py-2.5 text-sm font-bold text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50"
-              >
-                ← Cell Membrane
-              </Link>
-              <Link
-                href="/topics/cell-biology"
-                className="rounded-full border-2 border-zinc-200 px-6 py-2.5 text-sm font-bold text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50"
-              >
-                ↩ Cell Biology
-              </Link>
-            </div>
-
-          </div>
-        </div>
-        </OsmosisProvider>
-
-      </main>
-    </div>
+          <QuickRecap items={RECAP} />
+        </LessonSplit>
+      </OsmosisProvider>
+    </LessonLayout>
   );
 }

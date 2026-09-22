@@ -108,3 +108,25 @@ export const TOPICS: Topic[] = [
     upcoming: ["Food web builder", "Energy flow — trophic levels", "Carbon cycle"],
   },
 ];
+
+/** Look up a topic by id. Throws rather than returning undefined — a bad id is a build bug. */
+export function getTopic(id: TopicId): Topic {
+  const topic = TOPICS.find((t) => t.id === id);
+  if (!topic) throw new Error(`Unknown topic "${id}"`);
+  return topic;
+}
+
+/** Look up a lesson within a topic, plus its position and neighbours in the sequence. */
+export function getLesson(topicId: TopicId, lessonId: string) {
+  const topic = getTopic(topicId);
+  const index = topic.lessons.findIndex((l) => l.id === lessonId);
+  const lesson = topic.lessons[index];
+  if (!lesson) throw new Error(`"${lessonId}" is not a lesson of "${topicId}"`);
+  return {
+    topic,
+    lesson,
+    index,
+    prev: index > 0 ? topic.lessons[index - 1] : null,
+    next: index < topic.lessons.length - 1 ? topic.lessons[index + 1] : null,
+  };
+}

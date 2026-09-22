@@ -17,6 +17,7 @@
  */
 
 import { useState } from "react";
+import { VIZ_FRAME } from "@/components/visualizations/vizChrome";
 
 // ─── Model ────────────────────────────────────────────────────────────────────
 export interface Interventions {
@@ -257,7 +258,7 @@ function Meter({ label, value, max, display, color }: { label: string; value: nu
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between text-xs">
-        <span className="font-semibold text-zinc-500">{label}</span>
+        <span className="font-semibold text-zinc-700">{label}</span>
         <span className="font-bold tabular-nums text-zinc-800">{display}</span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-zinc-100" role="meter" aria-label={label}
@@ -271,7 +272,7 @@ function Meter({ label, value, max, display, color }: { label: string; value: nu
 function Toggle({ label, detail, on, onChange }: { label: string; detail: string; on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button role="switch" aria-checked={on} onClick={() => onChange(!on)}
-      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 ${
+      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 ${
         on ? "border-zinc-900 bg-zinc-50" : "border-zinc-200 bg-white hover:bg-zinc-50"
       }`}>
       <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${on ? "bg-zinc-900" : "bg-zinc-300"}`}>
@@ -279,7 +280,7 @@ function Toggle({ label, detail, on, onChange }: { label: string; detail: string
       </span>
       <span>
         <span className="block text-sm font-semibold text-zinc-900">{label}</span>
-        <span className="block text-xs text-zinc-500">{detail}</span>
+        <span className="block text-xs text-zinc-700">{detail}</span>
       </span>
     </button>
   );
@@ -302,7 +303,7 @@ export function RespirationSimulator() {
   const isNormal = !t.cyanide && t.oxygen && !t.dnp && !t.oligomycin;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="grid lg:grid-cols-[3fr_2fr]">
         {/* Map + meters */}
         <div className="border-b border-zinc-100 bg-gradient-to-br from-zinc-50 to-white p-4 lg:border-b-0 lg:border-r">
@@ -334,7 +335,7 @@ export function RespirationSimulator() {
           <Toggle label="Add oligomycin" detail="Antibiotic that blocks ATP synthase" on={t.oligomycin} onChange={(v) => set("oligomycin", v)} />
 
           <div className="rounded-xl bg-zinc-50 p-3.5" aria-live="polite">
-            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">What&apos;s happening</div>
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-600">What&apos;s happening</div>
             <ul className="space-y-1.5">
               {explain(t, s).map((line) => (
                 <li key={line} className="flex gap-2 text-xs leading-relaxed text-zinc-700">
@@ -350,7 +351,7 @@ export function RespirationSimulator() {
       {/* Challenges */}
       <div className="border-t border-zinc-100 bg-zinc-50/60 p-5">
         <h3 className="mb-3 text-sm font-bold text-zinc-900">
-          Challenges <span className="font-semibold text-zinc-400">· {found.size} / {CHALLENGES.length}</span>
+          Challenges <span className="font-semibold text-zinc-600">· {found.size} / {CHALLENGES.length}</span>
         </h3>
         <ul className="space-y-2">
           {CHALLENGES.map((c) => {

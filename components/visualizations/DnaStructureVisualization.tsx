@@ -26,6 +26,7 @@ import {
 import type React from "react";
 import { fadeLerp } from "@/lib/scrub";
 import { PredictionPrompt, type Prediction } from "@/components/lessons/PredictionPrompt";
+import { VIZ_FRAME } from "@/components/visualizations/vizChrome";
 
 // ─── Bases ────────────────────────────────────────────────────────────────────
 export type Base = "A" | "T" | "G" | "C";
@@ -521,10 +522,13 @@ export function DnaStructureProvider({ children }: { children: React.ReactNode }
   const [displayProgress, setDisplayProgress] = useState(0);
   useMotionValueEvent(progress, "change", setDisplayProgress);
   const animRef = useRef<AnimationPlaybackControls | null>(null);
+  // Springing between stages is decorative; reduced-motion users get the end state directly.
+  const reduceMotion = useReducedMotion();
   const [sequence, setSequence] = useState<readonly Base[]>(DEFAULT_SEQUENCE);
 
   function springTo(target: number) {
     animRef.current?.stop();
+    if (reduceMotion) { progress.set(target); return; }
     animRef.current = animate(progress, target, { type: "spring", stiffness: 380, damping: 30 });
   }
   function setProgressDirect(value: number) {
@@ -609,7 +613,7 @@ export function DnaStructureViewer() {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       {/* Stage tabs */}
       <div className="grid border-b border-zinc-100" style={{ gridTemplateColumns: `repeat(${STAGE_COUNT}, 1fr)` }}>
         {STAGES.map((st, i) => (
@@ -617,7 +621,7 @@ export function DnaStructureViewer() {
             aria-label={`Go to stage ${i + 1}: ${st.name}`}
             aria-current={snapIdx === i ? "step" : undefined}
             className={`py-2.5 px-0.5 text-[10px] font-semibold leading-tight transition-colors sm:px-1 sm:text-[11px] ${
-              snapIdx === i ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50"
+              snapIdx === i ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-700 hover:bg-zinc-50"
             }`}>
             {st.name}
           </button>
@@ -654,11 +658,11 @@ export function DnaStructureViewer() {
 
         {/* Scrub bar */}
         <div className="border-t border-zinc-100 bg-white px-5 pt-4 pb-5">
-          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-zinc-400 select-none pointer-events-none">
+          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-zinc-600 select-none pointer-events-none">
             ← drag right to zoom in →
           </p>
           <div className="flex items-center gap-3">
-            <span className="w-16 shrink-0 text-right text-[10px] font-semibold text-zinc-400 select-none pointer-events-none leading-tight">
+            <span className="w-16 shrink-0 text-right text-[10px] font-semibold text-zinc-600 select-none pointer-events-none leading-tight">
               {STAGES[0].name}
             </span>
             <div className="relative flex-1 h-3 rounded-full bg-zinc-100"
@@ -678,14 +682,14 @@ export function DnaStructureViewer() {
                 </svg>
               </div>
             </div>
-            <span className="w-16 shrink-0 text-[10px] font-semibold text-zinc-400 select-none pointer-events-none leading-tight">
+            <span className="w-16 shrink-0 text-[10px] font-semibold text-zinc-600 select-none pointer-events-none leading-tight">
               {STAGES[STAGE_COUNT - 1].name}
             </span>
           </div>
           <div className="mt-2 flex justify-between px-[4.75rem]">
             {STAGES.map((st, i) => (
               <button key={i} onClick={() => springTo(i)} aria-label={`Go to ${st.name}`}
-                className={`text-[10px] font-medium transition-colors ${snapIdx === i ? "text-zinc-700 font-bold" : "text-zinc-300 hover:text-zinc-500"}`}>
+                className={`text-[10px] font-medium transition-colors ${snapIdx === i ? "text-zinc-700 font-bold" : "text-zinc-300 hover:text-zinc-700"}`}>
                 {i + 1}
               </button>
             ))}
@@ -730,7 +734,7 @@ export function DnaStructurePanel() {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const prediction = PREDICTIONS[snapIdx];
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="p-5" style={{ background: cur.accentBg }}>
         <div className="mb-3 flex items-start justify-between gap-4">
           <div>
@@ -738,7 +742,7 @@ export function DnaStructurePanel() {
               Stage {snapIdx + 1} of {STAGE_COUNT}
             </span>
             <h3 className="mt-0.5 text-lg font-bold text-zinc-900">{cur.name}</h3>
-            <p className="text-sm text-zinc-500">{cur.subtitle}</p>
+            <p className="text-sm text-zinc-700">{cur.subtitle}</p>
           </div>
           <div className="flex shrink-0 gap-2">
             <button onClick={() => springTo(Math.max(0, snapIdx - 1))} disabled={snapIdx === 0}
@@ -803,7 +807,7 @@ export function DnaSequenceBuilder() {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="p-5">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-base font-bold text-zinc-900">Edit the top strand</h3>
@@ -818,7 +822,7 @@ export function DnaSequenceBuilder() {
             </button>
           </div>
         </div>
-        <p className="mb-4 text-xs leading-relaxed text-zinc-500">
+        <p className="mb-4 text-xs leading-relaxed text-zinc-700">
           Tap a base to cycle A → T → G → C. The partner strand and the helix diagram update to follow base-pairing rules.
         </p>
 
@@ -830,7 +834,7 @@ export function DnaSequenceBuilder() {
             {sequence.map((b, i) => (
               <button key={`top-${i}`} onClick={() => cycleBase(i)}
                 aria-label={`Top strand base ${i + 1}: ${BASE_NAME[b]}. Press to change.`}
-                className={`${BASE_BG_CLASS[b]} flex h-9 items-center justify-center rounded-md text-sm font-black text-white transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600`}>
+                className={`${BASE_BG_CLASS[b]} flex h-9 items-center justify-center rounded-md text-sm font-black text-white transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900`}>
                 {b}
               </button>
             ))}
@@ -859,7 +863,7 @@ export function DnaSequenceBuilder() {
 
       <div className="grid gap-4 border-t border-zinc-100 bg-zinc-50 p-5 sm:grid-cols-[3fr_2fr]">
         <div>
-          <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-600">
             Base composition (both strands)
           </div>
           <div className="space-y-1.5">
@@ -873,19 +877,19 @@ export function DnaSequenceBuilder() {
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-zinc-500">
+          <p className="mt-2 text-[11px] text-zinc-700">
             Chargaff&apos;s rule holds no matter what you type: %A = %T and %G = %C.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
           <div className="rounded-xl bg-white px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">GC content</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-600">GC content</div>
             <div className="text-xl font-black tabular-nums text-zinc-900">{gc}%</div>
           </div>
           <div className="rounded-xl bg-white px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Hydrogen bonds</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-600">Hydrogen bonds</div>
             <div className="text-xl font-black tabular-nums text-zinc-900">{hBonds}</div>
-            <div className="text-[11px] text-zinc-500">More = harder to separate</div>
+            <div className="text-[11px] text-zinc-700">More = harder to separate</div>
           </div>
         </div>
       </div>

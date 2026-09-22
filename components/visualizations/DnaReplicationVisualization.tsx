@@ -20,11 +20,13 @@ import {
   animate,
   useMotionValue,
   useMotionValueEvent,
+  useReducedMotion,
   type AnimationPlaybackControls,
 } from "framer-motion";
 import type React from "react";
 import { lerp, fadeLerp } from "@/lib/scrub";
 import { PredictionPrompt, type Prediction } from "@/components/lessons/PredictionPrompt";
+import { VIZ_FRAME } from "@/components/visualizations/vizChrome";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -477,9 +479,12 @@ export function DnaReplicationProvider({ children }: { children: React.ReactNode
   const [displayProgress, setDisplayProgress] = useState(0);
   useMotionValueEvent(progress, "change", setDisplayProgress);
   const animRef = useRef<AnimationPlaybackControls | null>(null);
+  // Springing between stages is decorative; reduced-motion users get the end state directly.
+  const reduceMotion = useReducedMotion();
 
   function springTo(target: number) {
     animRef.current?.stop();
+    if (reduceMotion) { progress.set(target); return; }
     animRef.current = animate(progress, target, { type: "spring", stiffness: 380, damping: 30 });
   }
   function setProgressDirect(value: number) {
@@ -543,7 +548,7 @@ export function DnaReplicationViewer() {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       {/* Stage tabs */}
       <div className="grid border-b border-zinc-100" style={{ gridTemplateColumns: `repeat(${STAGE_COUNT}, 1fr)` }}>
         {STAGES.map((st, i) => (
@@ -551,7 +556,7 @@ export function DnaReplicationViewer() {
             aria-label={`Go to stage ${i + 1}: ${st.title}`}
             aria-current={snapIdx === i ? "step" : undefined}
             className={`py-2.5 px-0.5 text-[10px] font-semibold leading-tight transition-colors sm:px-1 sm:text-[11px] ${
-              snapIdx === i ? "bg-zinc-900 text-white" : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50"
+              snapIdx === i ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-700 hover:bg-zinc-50"
             }`}>
             {st.name}
           </button>
@@ -582,11 +587,11 @@ export function DnaReplicationViewer() {
 
         {/* Scrub bar */}
         <div className="border-t border-zinc-100 bg-white px-5 pt-4 pb-5">
-          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-zinc-400 select-none pointer-events-none">
+          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-zinc-600 select-none pointer-events-none">
             ← drag right to replicate →
           </p>
           <div className="flex items-center gap-3">
-            <span className="w-16 shrink-0 text-right text-[10px] font-semibold text-zinc-400 select-none pointer-events-none leading-tight">
+            <span className="w-16 shrink-0 text-right text-[10px] font-semibold text-zinc-600 select-none pointer-events-none leading-tight">
               {STAGES[0].name}
             </span>
             <div className="relative flex-1 h-3 rounded-full bg-zinc-100"
@@ -606,14 +611,14 @@ export function DnaReplicationViewer() {
                 </svg>
               </div>
             </div>
-            <span className="w-16 shrink-0 text-[10px] font-semibold text-zinc-400 select-none pointer-events-none leading-tight">
+            <span className="w-16 shrink-0 text-[10px] font-semibold text-zinc-600 select-none pointer-events-none leading-tight">
               {STAGES[STAGE_COUNT - 1].name}
             </span>
           </div>
           <div className="mt-2 flex justify-between px-[4.75rem]">
             {STAGES.map((st, i) => (
               <button key={i} onClick={() => springTo(i)} aria-label={`Go to ${st.title}`}
-                className={`text-[10px] font-medium transition-colors ${snapIdx === i ? "text-zinc-700 font-bold" : "text-zinc-300 hover:text-zinc-500"}`}>
+                className={`text-[10px] font-medium transition-colors ${snapIdx === i ? "text-zinc-700 font-bold" : "text-zinc-300 hover:text-zinc-700"}`}>
                 {i + 1}
               </button>
             ))}
@@ -670,7 +675,7 @@ export function DnaReplicationPanel() {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const prediction = PREDICTIONS[snapIdx];
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="p-5" style={{ background: cur.accentBg }}>
         <div className="mb-3 flex items-start justify-between gap-4">
           <div>
@@ -678,7 +683,7 @@ export function DnaReplicationPanel() {
               Stage {snapIdx + 1} of {STAGE_COUNT}
             </span>
             <h3 className="mt-0.5 text-lg font-bold text-zinc-900">{cur.title}</h3>
-            <p className="text-sm text-zinc-500">{cur.subtitle}</p>
+            <p className="text-sm text-zinc-700">{cur.subtitle}</p>
           </div>
           <div className="flex shrink-0 gap-2">
             <button onClick={() => springTo(Math.max(0, snapIdx - 1))} disabled={snapIdx === 0}
@@ -736,7 +741,7 @@ const ENZYMES = [
 export function EnzymeRoster() {
   const { snapIdx, springTo } = useRepCtx();
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <ul className="divide-y divide-zinc-100">
         {ENZYMES.map((enz) => {
           const active = snapIdx === enz.stage;
@@ -744,16 +749,16 @@ export function EnzymeRoster() {
             <li key={enz.name}>
               <button onClick={() => springTo(enz.stage)}
                 aria-label={`${enz.name}: ${enz.job} Show stage ${enz.stage + 1}.`}
-                className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-violet-600 ${
+                className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-zinc-900 ${
                   active ? "bg-zinc-50" : "hover:bg-zinc-50"
                 }`}>
                 <span className="mt-1 h-3 w-3 shrink-0 rounded-full" style={{ background: enz.color }} />
                 <span className="flex-1">
                   <span className="block text-sm font-semibold text-zinc-900">{enz.name}</span>
-                  <span className="block text-xs leading-relaxed text-zinc-500">{enz.job}</span>
+                  <span className="block text-xs leading-relaxed text-zinc-700">{enz.job}</span>
                 </span>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                  active ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500"
+                  active ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700"
                 }`}>
                   Stage {enz.stage + 1}
                 </span>

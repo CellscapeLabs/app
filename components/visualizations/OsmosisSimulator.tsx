@@ -11,7 +11,8 @@
 
 import { useState, useRef, createContext, useContext } from "react";
 import type React from "react";
-import { motion, useAnimationFrame } from "framer-motion";
+import { motion, useAnimationFrame, useReducedMotion } from "framer-motion";
+import { VIZ_FRAME } from "@/components/visualizations/vizChrome";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -372,21 +373,21 @@ function ChamberStatus({ leftSolute, rightSolute }: { leftSolute: number; rightS
     <div className="mt-3 rounded-xl border border-zinc-100 bg-zinc-50 px-5 py-3.5">
       <div className="mb-2 grid grid-cols-3 gap-2 text-center text-xs">
         <div>
-          <p className="font-semibold text-zinc-400">Left solute</p>
-          <p className="text-lg font-black text-orange-500">{leftSolute}<span className="text-xs text-zinc-400">/10</span></p>
+          <p className="font-semibold text-zinc-600">Left solute</p>
+          <p className="text-lg font-black text-orange-500">{leftSolute}<span className="text-xs text-zinc-600">/10</span></p>
         </div>
         <div>
-          <p className="font-semibold text-zinc-400">Gradient</p>
+          <p className="font-semibold text-zinc-600">Gradient</p>
           <p className={`text-lg font-black ${Math.abs(gradient) > 0 ? "text-blue-500" : "text-zinc-300"}`}>
             {gradient > 0 ? `+${gradient}` : gradient}
           </p>
         </div>
         <div>
-          <p className="font-semibold text-zinc-400">Right solute</p>
-          <p className="text-lg font-black text-orange-500">{rightSolute}<span className="text-xs text-zinc-400">/10</span></p>
+          <p className="font-semibold text-zinc-600">Right solute</p>
+          <p className="text-lg font-black text-orange-500">{rightSolute}<span className="text-xs text-zinc-600">/10</span></p>
         </div>
       </div>
-      <p className="text-center text-xs text-zinc-500">{status}</p>
+      <p className="text-center text-xs text-zinc-700">{status}</p>
     </div>
   );
 }
@@ -409,11 +410,11 @@ function CellStatus({ extSolute }: { extSolute: number }) {
     <div className="mt-3 rounded-xl border border-zinc-100 bg-zinc-50 px-5 py-3.5">
       <div className="mb-1.5 flex items-center justify-between">
         <span className={`text-sm font-black uppercase tracking-wider ${color}`}>{tonicity}</span>
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs text-zinc-600">
           External: {extSolute}/10 · Internal (fixed): {INT_SOLUTE}/10
         </span>
       </div>
-      <p className="text-xs leading-relaxed text-zinc-500">{desc}</p>
+      <p className="text-xs leading-relaxed text-zinc-700">{desc}</p>
     </div>
   );
 }
@@ -568,21 +569,21 @@ function UTubeStatus({ leftSolute, rightSolute }: { leftSolute: number; rightSol
     <div className="mt-3 rounded-xl border border-zinc-100 bg-zinc-50 px-5 py-3.5">
       <div className="mb-2 grid grid-cols-3 gap-2 text-center text-xs">
         <div>
-          <p className="font-semibold text-zinc-400">Left solute</p>
-          <p className="text-lg font-black text-orange-500">{leftSolute}<span className="text-xs text-zinc-400">/10</span></p>
+          <p className="font-semibold text-zinc-600">Left solute</p>
+          <p className="text-lg font-black text-orange-500">{leftSolute}<span className="text-xs text-zinc-600">/10</span></p>
         </div>
         <div>
-          <p className="font-semibold text-zinc-400">Difference</p>
+          <p className="font-semibold text-zinc-600">Difference</p>
           <p className={`text-lg font-black ${Math.abs(gradient) > 0 ? "text-blue-500" : "text-zinc-300"}`}>
             {gradient > 0 ? `+${gradient}` : gradient}
           </p>
         </div>
         <div>
-          <p className="font-semibold text-zinc-400">Right solute</p>
-          <p className="text-lg font-black text-orange-500">{rightSolute}<span className="text-xs text-zinc-400">/10</span></p>
+          <p className="font-semibold text-zinc-600">Right solute</p>
+          <p className="text-lg font-black text-orange-500">{rightSolute}<span className="text-xs text-zinc-600">/10</span></p>
         </div>
       </div>
-      <p className="text-center text-xs text-zinc-500">{status}</p>
+      <p className="text-center text-xs text-zinc-700">{status}</p>
     </div>
   );
 }
@@ -646,13 +647,15 @@ export function OsmosisViewer() {
     () => Array.from({ length: MAX_CROSS }, (_, i) => i / MAX_CROSS),
   );
   const prevDirRef = useRef<"lr" | "rl" | null>(null);
+  // Reduced motion leaves the water molecules at their spread starting positions.
+  const reduceMotion = useReducedMotion();
 
   const gradient  = rightSolute - leftSolute;
   const direction = gradient > 0 ? "lr" : gradient < 0 ? "rl" : null;
   const activeN   = Math.min(Math.ceil(Math.abs(gradient) * 0.7), MAX_CROSS);
 
   useAnimationFrame((_time, delta) => {
-    if (tab !== "chamber") return;
+    if (tab !== "chamber" || reduceMotion) return;
     if (direction !== prevDirRef.current) {
       prevDirRef.current = direction;
       setCrossPhases(Array.from({ length: MAX_CROSS }, (_, i) => i / MAX_CROSS));
@@ -671,7 +674,7 @@ export function OsmosisViewer() {
   });
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       {/* View tabs */}
       <div className="flex border-b border-zinc-100">
         {([
@@ -685,7 +688,7 @@ export function OsmosisViewer() {
             className={`flex-1 py-3 text-xs font-bold transition-colors
               ${tab === id
                 ? "border-b-2 border-emerald-500 bg-emerald-50/60 text-emerald-600"
-                : "text-zinc-400 hover:text-zinc-700"}`}
+                : "text-zinc-600 hover:text-zinc-700"}`}
             aria-pressed={tab === id}
           >
             {label}
@@ -732,14 +735,14 @@ export function OsmosisViewer() {
               <label className="block">
                 <span className="mb-1 block text-xs font-bold text-zinc-600">
                   External solute: <span className="text-orange-500">{extSolute}/10</span>
-                  <span className="ml-2 text-zinc-400">· Internal (fixed): 5/10</span>
+                  <span className="ml-2 text-zinc-600">· Internal (fixed): 5/10</span>
                 </span>
                 <input type="range" min={0} max={10} step={1}
                   value={extSolute}
                   onChange={e => setExtSolute(Number(e.target.value))}
                   className="w-full accent-orange-500"
                   aria-label="External solute concentration" />
-                <div className="mt-1 flex justify-between text-[10px] text-zinc-400">
+                <div className="mt-1 flex justify-between text-[10px] text-zinc-600">
                   <span>0 — hypotonic</span>
                   <span>5 — isotonic</span>
                   <span>10 — hypertonic</span>
@@ -863,7 +866,7 @@ export function OsmosisInfoPanel() {
   const tab = INFO_TABS.find(t => t.id === active) ?? INFO_TABS[0];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="flex border-b border-zinc-100">
         {INFO_TABS.map(({ id, label }) => (
           <button
@@ -872,7 +875,7 @@ export function OsmosisInfoPanel() {
             className={`flex-1 py-2.5 text-xs font-bold transition-colors leading-tight px-1
               ${active === id
                 ? "border-b-2 border-emerald-500 bg-emerald-50/60 text-emerald-600"
-                : "text-zinc-400 hover:text-zinc-700"}`}
+                : "text-zinc-600 hover:text-zinc-700"}`}
             aria-pressed={active === id}
           >
             {label}
