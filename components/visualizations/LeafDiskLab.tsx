@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { VIZ_FRAME } from "@/components/visualizations/vizChrome";
 
 // ─── Model ────────────────────────────────────────────────────────────────────
 export type LightColor = "white" | "red" | "blue" | "green";
@@ -313,7 +314,7 @@ export function LeafDiskLab() {
   const completed = new Set(CHALLENGES.filter((c) => trials.some((t) => t.id !== runningId && c.done(t))).map((c) => c.id));
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="grid gap-0 lg:grid-cols-[3fr_2fr]">
 
         {/* Scene */}
@@ -365,21 +366,21 @@ export function LeafDiskLab() {
 
           {/* Live readouts */}
           <div className="rounded-xl bg-zinc-50 p-3">
-            <div className="mb-1 flex items-baseline justify-between text-xs font-bold uppercase tracking-wider text-zinc-400">
+            <div className="mb-1 flex items-baseline justify-between text-xs font-bold uppercase tracking-wider text-zinc-600">
               <span>Photosynthesis rate</span>
               <span className="tabular-nums text-zinc-700">{Math.round(liveRate * 100)}%</span>
             </div>
             <div className="h-2 w-full rounded-full bg-zinc-200">
               <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.round(liveRate * 100)}%` }} />
             </div>
-            <div className="mt-2 text-xs text-zinc-500">
+            <div className="mt-2 text-xs text-zinc-700">
               Limiting factor: <span className="font-bold text-zinc-800">{limitingFactor(settings)}</span>
             </div>
           </div>
 
           <div className="flex gap-2">
             <button onClick={runTrial} disabled={running}
-              className="flex-1 rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+              className="flex-1 rounded-full bg-zinc-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50">
               {running ? "Running…" : "▶ Run trial"}
             </button>
             <button onClick={clearTrials} disabled={trials.length === 0}
@@ -403,7 +404,7 @@ export function LeafDiskLab() {
           <div className="overflow-x-auto rounded-xl border border-zinc-100">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-zinc-50 text-left font-semibold uppercase tracking-wider text-zinc-400">
+                <tr className="bg-zinc-50 text-left font-semibold uppercase tracking-wider text-zinc-600">
                   <th className="px-3 py-2">#</th>
                   <th className="px-3 py-2">Light</th>
                   <th className="px-3 py-2">CO₂</th>
@@ -413,7 +414,7 @@ export function LeafDiskLab() {
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {trials.length === 0 && (
-                  <tr><td colSpan={5} className="px-3 py-4 text-center text-zinc-400">No trials yet</td></tr>
+                  <tr><td colSpan={5} className="px-3 py-4 text-center text-zinc-600">No trials yet</td></tr>
                 )}
                 {trials.map((t) => {
                   const done = t.id !== runningId;
@@ -438,14 +439,14 @@ export function LeafDiskLab() {
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-[11px] text-zinc-400">Shorter time = faster photosynthesis. The graph keeps your last {MAX_TRIALS} trials.</p>
+          <p className="mt-2 text-[11px] text-zinc-600">Shorter time = faster photosynthesis. The graph keeps your last {MAX_TRIALS} trials.</p>
         </div>
       </div>
 
       {/* Challenges */}
       <div className="border-t border-zinc-100 bg-zinc-50/60 p-5">
         <h3 className="mb-3 text-sm font-bold text-zinc-900">
-          Challenges <span className="font-semibold text-zinc-400">· {completed.size} / {CHALLENGES.length}</span>
+          Challenges <span className="font-semibold text-zinc-600">· {completed.size} / {CHALLENGES.length}</span>
         </h3>
         <ul className="space-y-2">
           {CHALLENGES.map((c) => {

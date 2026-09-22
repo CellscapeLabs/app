@@ -5,7 +5,8 @@
 // the membrane to illustrate concentration gradients and energy requirements.
 
 import { useState, createContext, useContext } from "react";
-import { motion, AnimatePresence, useAnimationFrame } from "framer-motion";
+import { motion, AnimatePresence, useAnimationFrame, useReducedMotion } from "framer-motion";
+import { VIZ_FRAME } from "@/components/visualizations/vizChrome";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -246,8 +247,14 @@ function SimpleDiffusionView() {
     { id: 6, x: 380, startY: 46,  endY: 274, delay: 0.9,  duration: 2.1, color: C.oxygen, label: "CO₂", radius: 12 },
   ];
 
-  const [progresses, setProgresses] = useState<number[]>(particles.map(() => 0));
+  // Frozen for reduced-motion users at a spread of depths, so the diagram still reads
+  // as "these molecules cross the bilayer" without anything moving.
+  const reduceMotion = useReducedMotion();
+  const [progresses, setProgresses] = useState<number[]>(
+    particles.map((_, i) => (i + 1) / (particles.length + 1)),
+  );
   useAnimationFrame((t) => {
+    if (reduceMotion) return;
     const s = t / 1000;
     setProgresses(particles.map((p) => {
       const cycle = (s - p.delay + 100 * p.duration) % p.duration / p.duration;
@@ -309,8 +316,14 @@ function FacilitatedDiffusionView() {
     { id: 3, x: 420, startY: 36,  endY: 284, delay: 1.4, duration: 3.0, color: C.glucose, label: "G", radius: 12 },
   ];
 
-  const [progresses, setProgresses] = useState<number[]>(particles.map(() => 0));
+  // Frozen for reduced-motion users at a spread of depths, so the diagram still reads
+  // as "these molecules cross the bilayer" without anything moving.
+  const reduceMotion = useReducedMotion();
+  const [progresses, setProgresses] = useState<number[]>(
+    particles.map((_, i) => (i + 1) / (particles.length + 1)),
+  );
   useAnimationFrame((t) => {
+    if (reduceMotion) return;
     const s = t / 1000;
     setProgresses(particles.map((p) => {
       const cycle = (s - p.delay + 100 * p.duration) % p.duration / p.duration;
@@ -412,8 +425,11 @@ function ActiveTransportView() {
 
   const [cycleT,   setCycleT]   = useState(0);
   const [phaseIdx, setPhaseIdx] = useState(0);
+  // Reduced motion holds the pump on phase 1; the panel text carries the rest of the cycle.
+  const reduceMotion = useReducedMotion();
 
   useAnimationFrame((t) => {
+    if (reduceMotion) return;
     const ct = (t / 1000) % TOTAL_CYCLE;
     let acc = 0, idx = 0;
     for (let i = 0; i < PUMP_PHASES.length; i++) {
@@ -658,7 +674,7 @@ export function CellMembraneViewer() {
   const tab = TABS.find((t) => t.id === activeTab)!;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       {/* Tab row */}
       <div className="grid grid-cols-4 border-b border-zinc-100">
         {TABS.map((t) => (
@@ -668,7 +684,7 @@ export function CellMembraneViewer() {
             className={`py-2.5 text-[11px] font-semibold leading-tight px-1 transition-colors ${
               activeTab === t.id
                 ? "bg-zinc-900 text-white"
-                : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50"
+                : "text-zinc-600 hover:text-zinc-700 hover:bg-zinc-50"
             }`}
           >
             {t.label}
@@ -699,7 +715,7 @@ export function CellMembraneViewer() {
 
       {/* Bottom bar */}
       <div className="border-t border-zinc-100 px-5 py-3 flex items-center justify-between">
-        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+        <span className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">
           {tab.subtitle}
         </span>
         <div className="flex gap-1.5">
@@ -725,7 +741,7 @@ export function CellMembranePanel() {
   const curIdx = TABS.findIndex((t) => t.id === activeTab);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="p-5" style={{ background: tab.accentBg }}>
         <div className="mb-3 flex items-start justify-between gap-4">
           <div>

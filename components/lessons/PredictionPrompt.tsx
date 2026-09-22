@@ -25,7 +25,7 @@ export function PredictionPrompt({
 
   return (
     <div className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-white/80 p-4">
-      <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+      <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
         Predict before you continue
       </div>
       <p className="mb-3 text-sm font-semibold text-zinc-900">{question}</p>
@@ -40,11 +40,11 @@ export function PredictionPrompt({
               ? "border-emerald-400 bg-emerald-50 text-emerald-900"
               : isPicked
                 ? "border-rose-300 bg-rose-50 text-rose-900"
-                : "border-zinc-100 bg-white text-zinc-400";
+                : "border-zinc-100 bg-white text-zinc-600";
           return (
             <button key={opt} onClick={() => !answered && onSelect(i)} aria-pressed={isPicked}
               disabled={answered && !isPicked && !isCorrect}
-              className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-left text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 ${tone} ${answered ? "cursor-default" : ""}`}>
+              className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-left text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 ${tone} ${answered ? "cursor-default" : ""}`}>
               <span aria-hidden="true" className="mt-px w-4 shrink-0 text-center font-black">
                 {answered ? (isCorrect ? "✓" : isPicked ? "✗" : "") : String.fromCharCode(65 + i)}
               </span>

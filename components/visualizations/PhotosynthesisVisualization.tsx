@@ -18,12 +18,14 @@ import {
   animate,
   useMotionValue,
   useMotionValueEvent,
+  useReducedMotion,
   type AnimationPlaybackControls,
   type MotionValue,
 } from "framer-motion";
 import type React from "react";
 import { lerp, fadeLerp, q } from "@/lib/scrub";
 import { PredictionPrompt, type Prediction } from "@/components/lessons/PredictionPrompt";
+import { VIZ_FRAME } from "@/components/visualizations/vizChrome";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -177,10 +179,13 @@ export function PhotosynthesisProvider({ children }: { children: React.ReactNode
   const [progress, setProgress] = useState(0);
   const mv   = useMotionValue(0);
   const anim = useRef<AnimationPlaybackControls | null>(null);
+  // Springing between stages is decorative; reduced-motion users get the end state directly.
+  const reduceMotion = useReducedMotion();
   useMotionValueEvent(mv, "change", (v) => setProgress(v));
 
   function snapTo(target: number) {
     anim.current?.stop();
+    if (reduceMotion) { mv.set(target); return; }
     anim.current = animate(mv, target, { type: "spring", stiffness: 260, damping: 28 });
   }
 
@@ -522,7 +527,7 @@ export function PhotosynthesisViewer() {
   });
 
   return (
-    <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden select-none">
+    <div className={`${VIZ_FRAME} select-none`}>
       {/* Stage tabs */}
       <div className="flex border-b border-zinc-100 overflow-x-auto scrollbar-hide">
         {STAGES.map((s, i) => (
@@ -534,7 +539,7 @@ export function PhotosynthesisViewer() {
             className={`shrink-0 px-3 py-2.5 text-xs font-semibold transition-colors ${
               stage === i
                 ? "border-b-2 border-emerald-500 text-emerald-700 bg-emerald-50"
-                : "text-zinc-400 hover:text-zinc-700"
+                : "text-zinc-600 hover:text-zinc-700"
             }`}
           >
             {s.label}
@@ -556,7 +561,7 @@ export function PhotosynthesisViewer() {
       </div>
 
       {/* Drag hint */}
-      <p className="py-2 text-center text-xs text-zinc-400">
+      <p className="py-2 text-center text-xs text-zinc-600">
         Drag left/right, use arrow keys, or click a tab to explore
       </p>
     </div>
@@ -606,22 +611,22 @@ export function PhotosynthesisPanel() {
   const prediction = PREDICTIONS[stage];
 
   return (
-    <div className="rounded-2xl border border-zinc-100 bg-white p-6 space-y-4">
+    <div className={`${VIZ_FRAME} p-6 space-y-4`}>
       <div>
         <div className="mb-1 text-xs font-bold uppercase tracking-wider text-emerald-600">
           {s.location}
         </div>
         <h2 className="text-xl font-bold tracking-tight text-zinc-900">{s.heading}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-zinc-500">{s.sub}</p>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-700">{s.sub}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl bg-zinc-50 px-4 py-3">
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Inputs</div>
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-600">Inputs</div>
           <div className="text-sm font-semibold text-zinc-700">{s.inputs}</div>
         </div>
         <div className="rounded-xl bg-zinc-50 px-4 py-3">
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Outputs</div>
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-600">Outputs</div>
           <div className="text-sm font-semibold text-zinc-700">{s.outputs}</div>
         </div>
       </div>

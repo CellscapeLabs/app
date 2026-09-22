@@ -3,6 +3,7 @@
 // lesson below the fold, and fades out for good once the student starts scrolling.
 
 import { useEffect, useState } from "react";
+import { CONTROL } from "@/components/ui/tokens";
 
 const SHOW_DELAY_MS = 1200;
 const DISMISS_AFTER_PX = 80;
@@ -42,7 +43,7 @@ export function ScrollHint() {
       visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
     }`}>
       <button onClick={scrollDown} tabIndex={visible ? 0 : -1} aria-hidden={!visible}
-        className="pointer-events-auto flex items-center gap-2 rounded-full bg-zinc-900/85 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur-sm transition hover:bg-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">
+        className={`pointer-events-auto flex items-center gap-2 rounded-full bg-zinc-900/85 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur-sm transition hover:bg-zinc-900 ${CONTROL.focus}`}>
         Scroll to continue
         <span aria-hidden="true" className="motion-safe:animate-bounce">↓</span>
       </button>

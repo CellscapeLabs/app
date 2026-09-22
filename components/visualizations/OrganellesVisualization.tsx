@@ -18,6 +18,7 @@ import {
   RoughERGroup,
   SmoothERGroup,
 } from "./CellIllustration";
+import { VIZ_FRAME, VIZ_INSET } from "@/components/visualizations/vizChrome";
 
 // ─── Palette shortcuts ────────────────────────────────────────────────────────
 
@@ -557,7 +558,7 @@ export function OrganellesViewer() {
   const viewBox   = isCloseUp ? CLOSEUP_VIEWBOX[selected] : FULL_VIEWBOX;
 
   return (
-    <div className="relative w-full rounded-2xl border border-zinc-100 bg-zinc-50 overflow-hidden">
+    <div className={`relative w-full overflow-hidden ${VIZ_INSET}`}>
       <AnimatePresence mode="wait">
         <motion.div
           key={isCloseUp ? `closeup-${selected}` : "full"}
@@ -603,7 +604,7 @@ export function OrganellesViewer() {
         )}
       </AnimatePresence>
 
-      <p className="py-1.5 text-center text-xs text-zinc-400 select-none border-t border-zinc-100">
+      <p className="py-1.5 text-center text-xs text-zinc-600 select-none border-t border-zinc-100">
         {isCloseUp ? "Click ← to return to the full cell" : "Click to explore a structure"}
       </p>
     </div>
@@ -625,14 +626,14 @@ export function OrganellesPanel() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm"
+          className={`${VIZ_FRAME} p-6`}
         >
           <div className="mb-3 flex items-center gap-2">
             <span
               className="h-3 w-3 rounded-full shrink-0"
               style={{ backgroundColor: data.color }}
             />
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-600">
               {data.tagline}
             </span>
           </div>
@@ -656,7 +657,7 @@ export function OrganellesPanel() {
               Real-world analogy
             </p>
             <p className="text-sm font-semibold text-zinc-800">{data.analogy}</p>
-            <p className="mt-1 text-xs leading-relaxed text-zinc-500">{data.analogyDetail}</p>
+            <p className="mt-1 text-xs leading-relaxed text-zinc-700">{data.analogyDetail}</p>
           </div>
         </motion.div>
       ) : (
@@ -668,7 +669,7 @@ export function OrganellesPanel() {
           transition={{ duration: 0.18 }}
           className="flex h-44 items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50"
         >
-          <p className="text-sm text-zinc-400">← Click to explore a structure</p>
+          <p className="text-sm text-zinc-600">← Click to explore a structure</p>
         </motion.div>
       )}
     </AnimatePresence>
@@ -696,10 +697,10 @@ export function PlantCellComparison() {
   const plantDim  = highlight === "animal";
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="border-b border-zinc-100 px-5 py-3">
         <h3 className="text-sm font-bold text-zinc-900">Animal cell vs. Plant cell</h3>
-        <p className="mt-0.5 text-xs text-zinc-400">Hover each cell to highlight what makes it unique</p>
+        <p className="mt-0.5 text-xs text-zinc-600">Hover each cell to highlight what makes it unique</p>
       </div>
       <div className="p-4">
         <svg viewBox="0 0 600 280" className="w-full" aria-label="Animal cell and plant cell comparison">
@@ -799,7 +800,7 @@ export function PlantCellComparison() {
         <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
           <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
             <p className="mb-2 font-bold text-zinc-700">Animal cell only</p>
-            <ul className="space-y-1 text-zinc-500">
+            <ul className="space-y-1 text-zinc-700">
               <li className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: C.centrosome }} />
                 Centrosome (centrioles for cell division)
@@ -812,7 +813,7 @@ export function PlantCellComparison() {
           </div>
           <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
             <p className="mb-2 font-bold text-zinc-700">Plant cell only</p>
-            <ul className="space-y-1 text-zinc-500">
+            <ul className="space-y-1 text-zinc-700">
               <li className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: PLANT_COLORS.cellWall }} />
                 Cell wall (cellulose — rigid support)
@@ -832,7 +833,7 @@ export function PlantCellComparison() {
         {/* Shared structures */}
         <div className="mt-3 rounded-xl border border-zinc-100 bg-zinc-50 p-3">
           <p className="mb-2 text-xs font-bold text-zinc-700">Found in both cell types</p>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-zinc-500 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-zinc-700 sm:grid-cols-3">
             {[
               ["nucleus",        C.nucleus,      "Nucleus — DNA storage and gene control"],
               ["mitochondria",   C.mito,         "Mitochondria — ATP production"],

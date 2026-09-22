@@ -17,6 +17,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { VIZ_FRAME } from "@/components/visualizations/vizChrome";
 
 // ─── Model ────────────────────────────────────────────────────────────────────
 type Origin = "M" | "P";   // maternal / paternal
@@ -229,11 +230,11 @@ export function GameteBuilder() {
   const completed = CHALLENGES.filter((c) => c.done(found));
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className={VIZ_FRAME}>
       <div className="grid lg:grid-cols-[3fr_2fr]">
         {/* Cell */}
         <div className="border-b border-zinc-100 bg-gradient-to-br from-zinc-50 to-white p-4 lg:border-b-0 lg:border-r">
-          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-zinc-500">
+          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-zinc-700">
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: COLOR.M }} />From mother (A B D E)</span>
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: COLOR.P }} />From father (a b d e)</span>
             <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-slate-400" />Metaphase plate · pairs 1–3, left to right</span>
@@ -247,21 +248,21 @@ export function GameteBuilder() {
         <div className="space-y-4 p-5">
           <div>
             <h3 className="text-sm font-bold text-zinc-900">1 · Line up the pairs</h3>
-            <p className="mb-2 text-xs text-zinc-500">Choose which copy of each pair faces the top of the cell.</p>
+            <p className="mb-2 text-xs text-zinc-700">Choose which copy of each pair faces the top of the cell.</p>
             <div className="grid grid-cols-3 gap-2">
               {topCopies.map((o, p) => (
                 <button key={p} onClick={() => flip(p)}
                   aria-label={`Flip pair ${p + 1}. Currently the ${o === "M" ? "mother's" : "father's"} copy is on top.`}
-                  className="rounded-xl border border-zinc-200 bg-white px-2 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">
+                  className="rounded-xl border border-zinc-200 bg-white px-2 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900">
                   <span className="block">Pair {p + 1}</span>
-                  <span className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-zinc-500">
+                  <span className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-zinc-700">
                     <span className="h-2 w-2 rounded-sm" style={{ background: COLOR[o] }} />
                     ⇅ flip
                   </span>
                 </button>
               ))}
             </div>
-            <button onClick={shuffle} className="mt-2 text-xs font-semibold text-violet-700 hover:underline">
+            <button onClick={shuffle} className="mt-2 text-xs font-semibold text-zinc-700 underline-offset-2 hover:underline">
               🎲 Shuffle randomly
             </button>
           </div>
@@ -269,7 +270,7 @@ export function GameteBuilder() {
           <div>
             <h3 className="text-sm font-bold text-zinc-900">2 · Cross over</h3>
             <button role="switch" aria-checked={crossover} onClick={() => { setCrossover(!crossover); setupChanged(); }}
-              className={`mt-2 flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 ${
+              className={`mt-2 flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 ${
                 crossover ? "border-zinc-900 bg-zinc-50" : "border-zinc-200 bg-white hover:bg-zinc-50"
               }`}>
               <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${crossover ? "bg-zinc-900" : "bg-zinc-300"}`}>
@@ -277,7 +278,7 @@ export function GameteBuilder() {
               </span>
               <span>
                 <span className="block text-sm font-semibold text-zinc-900">Crossing over on pair 1</span>
-                <span className="block text-xs text-zinc-500">Non-sister chromatids swap the ends carrying gene B</span>
+                <span className="block text-xs text-zinc-700">Non-sister chromatids swap the ends carrying gene B</span>
               </span>
             </button>
           </div>
@@ -285,7 +286,7 @@ export function GameteBuilder() {
           <div>
             <h3 className="mb-2 text-sm font-bold text-zinc-900">3 · Divide</h3>
             <button onClick={runDivision}
-              className="w-full rounded-full bg-violet-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-violet-700">
+              className="w-full rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800">
               Run meiosis I + II →
             </button>
           </div>
@@ -302,7 +303,7 @@ export function GameteBuilder() {
             ))}
           </div>
         ) : (
-          <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-400">
+          <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-600">
             Set up the cell, then press <span className="font-semibold text-zinc-600">Run meiosis</span> to make gametes.
           </p>
         )}
@@ -312,9 +313,9 @@ export function GameteBuilder() {
       <div className="grid gap-5 border-t border-zinc-100 bg-zinc-50/60 p-5 lg:grid-cols-2">
         <div>
           <h3 className="mb-1 text-sm font-bold text-zinc-900">
-            Gamete collection <span className="font-semibold text-zinc-400">· {found.size} / {ALL_GENOTYPES.length}</span>
+            Gamete collection <span className="font-semibold text-zinc-600">· {found.size} / {ALL_GENOTYPES.length}</span>
           </h3>
-          <p className="mb-3 text-xs text-zinc-500">Every different gamete this cell can make.</p>
+          <p className="mb-3 text-xs text-zinc-700">Every different gamete this cell can make.</p>
           <ul className="grid grid-cols-4 gap-1.5">
             {ALL_GENOTYPES.map((gt) => {
               const has = found.has(gt);
@@ -331,7 +332,7 @@ export function GameteBuilder() {
         </div>
         <div>
           <h3 className="mb-3 text-sm font-bold text-zinc-900">
-            Challenges <span className="font-semibold text-zinc-400">· {completed.length} / {CHALLENGES.length}</span>
+            Challenges <span className="font-semibold text-zinc-600">· {completed.length} / {CHALLENGES.length}</span>
           </h3>
           <ul className="space-y-2">
             {CHALLENGES.map((c) => {

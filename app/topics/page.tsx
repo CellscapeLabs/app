@@ -73,7 +73,7 @@ export default function TopicsPage() {
 
                 {/* Lessons side — real lessons, then placeholders for what's coming */}
                 <div className="bg-white p-4 sm:p-6">
-                  <div className="mb-2 px-2 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  <div className="mb-2 px-2 text-xs font-bold uppercase tracking-wider text-zinc-600">
                     {count ? "Lessons" : "Planned lessons"}
                   </div>
                   <ul className="grid gap-1 sm:grid-cols-2">
@@ -98,8 +98,8 @@ export default function TopicsPage() {
                       <li key={u} className="flex items-center gap-3 p-2">
                         <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 font-display text-lg font-bold text-zinc-300">?</span>
                         <span className="min-w-0">
-                          <span className="block font-display text-base font-bold leading-snug text-zinc-400">{u}</span>
-                          <span className="block text-xs text-zinc-400">Coming soon</span>
+                          <span className="block font-display text-base font-bold leading-snug text-zinc-600">{u}</span>
+                          <span className="block text-xs text-zinc-600">Coming soon</span>
                         </span>
                       </li>
                     ))}

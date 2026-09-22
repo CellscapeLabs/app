@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { TOPICS, type LessonFormat } from "@/content/topics";
+import { TOPICS } from "@/content/topics";
 import { LESSON_EMBLEMS } from "@/components/lessons/lessonEmblems";
 import { SiteNav } from "@/components/ui/SiteNav";
 import { SiteFooter } from "@/components/ui/SiteFooter";
@@ -24,14 +24,6 @@ const ALL_LESSONS = TOPICS.flatMap((t) => t.lessons.map((l) => ({ ...l, topic: t
 const LESSON_COUNT = ALL_LESSONS.length;
 const NEWEST = ALL_LESSONS[ALL_LESSONS.length - 1];
 
-const FORMAT_STYLE: Record<LessonFormat, { panel: string; sticker: string }> = {
-  "Virtual lab":  { panel: "bg-emerald-200", sticker: "bg-lime-300" },
-  "Simulator":    { panel: "bg-amber-200",   sticker: "bg-orange-300" },
-  "Builder":      { panel: "bg-violet-200",  sticker: "bg-pink-300" },
-  "Step-through": { panel: "bg-sky-200",     sticker: "bg-cyan-300" },
-  "Explorer":     { panel: "bg-rose-200",    sticker: "bg-rose-300" },
-};
-
 const FEATURED = [
   { lesson: "photosynthesis",       body: "Run the leaf disk assay. Change light, CO₂, and temperature, then graph what happens." },
   { lesson: "cellular-respiration", body: "Cut off oxygen or add cyanide and watch the whole pipeline jam." },
@@ -47,8 +39,6 @@ const STEPS = [
   { n: "2", title: "Predict",    color: "bg-violet-300", body: "Commit to an answer before the reveal — the fastest way to find what you don't know yet.", Mockup: PredictMockup },
   { n: "3", title: "Experiment", color: "bg-sky-300",    body: "Change the conditions, run trials, and compare results like a real lab.", Mockup: ExperimentMockup },
 ] as const;
-
-const TICKER = [...ALL_LESSONS.map((l) => l.title), ...TOPICS.flatMap((t) => t.upcoming.slice(0, 1).map((u) => `${u.split(" — ")[0]} (soon)`))];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -66,7 +56,7 @@ export default function Home() {
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pt-12 pb-16 lg:grid-cols-[1.05fr_1fr] lg:gap-6 lg:pt-20 lg:pb-24">
             <Reveal>
               <Link href={NEWEST.href} className="group inline-flex items-center gap-2 text-sm font-medium text-zinc-700">
-                <Sticker className="bg-pink-300">New lesson</Sticker>
+                <Sticker className="bg-white">New lesson</Sticker>
                 <span className="group-hover:underline">{NEWEST.title}</span>
                 <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
               </Link>
@@ -90,7 +80,7 @@ export default function Home() {
               </div>
 
               <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-zinc-700">
-                {[`${LESSON_COUNT} hands-on lessons`, "Free, no sign-up", "Works on your phone"].map((t) => (
+                {["Aligned to the AP Biology CED", `${LESSON_COUNT} hands-on lessons`, "Free, no sign-up", "Works on your phone"].map((t) => (
                   <li key={t} className="flex items-center gap-2">
                     <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-zinc-950 bg-lime-300 text-[10px] font-black">✓</span>
                     {t}
@@ -105,21 +95,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Ticker ── */}
-        <div className="relative -left-[2vw] w-[104vw] -rotate-1 border-y-2 border-zinc-950 bg-emerald-500 py-3" aria-hidden="true">
-          <div className="flex w-max animate-marquee">
-            {[0, 1].map((copy) => (
-              <div key={copy} className="flex shrink-0 items-center">
-                {TICKER.map((item) => (
-                  <span key={`${copy}-${item}`} className="flex items-center font-display text-xl font-bold text-white">
-                    <span className="px-6">{item}</span>
-                    <span className="text-lime-300">✳</span>
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* ── Lesson formats ── */}
         <section id="formats" className="scroll-mt-16">
@@ -138,19 +113,19 @@ export default function Home() {
             <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {FEATURED.map((f, i) => {
                 const Emblem = LESSON_EMBLEMS[f.id];
-                const style = FORMAT_STYLE[f.format];
+                const theme = TOPIC_THEME[f.topic];
                 return (
                   <Reveal key={f.id} delay={i * 0.06} className="h-full">
                     <Link href={f.href}
-                      className={`group flex h-full flex-col overflow-hidden rounded-3xl border-2 border-zinc-950 bg-white shadow-[4px_4px_0_0_#09090b] transition-all hover:-translate-y-1 hover:shadow-[6px_8px_0_0_#09090b] ${i % 2 ? "sm:rotate-1" : "sm:-rotate-1"} hover:rotate-0`}>
-                      <div className={`relative aspect-[4/3] overflow-hidden border-b-2 border-zinc-950 ${style.panel}`}>
+                      className="group flex h-full flex-col overflow-hidden rounded-3xl border-2 border-zinc-950 bg-white shadow-[4px_4px_0_0_#09090b] transition-all hover:-translate-y-1 hover:shadow-[6px_8px_0_0_#09090b]">
+                      <div className={`relative aspect-[4/3] overflow-hidden border-b-2 border-zinc-950 ${theme.soft}`}>
                         {Emblem && (
                           <div className="absolute inset-x-6 top-5 bottom-0 transition-transform duration-500 group-hover:scale-110">
                             <Emblem className="h-full w-full" />
                           </div>
                         )}
                         <span className="absolute left-3 top-3">
-                          <Sticker className={style.sticker}>{f.format}</Sticker>
+                          <Sticker className="bg-white">{f.format}</Sticker>
                         </span>
                       </div>
                       <div className="flex flex-1 flex-col p-5">
@@ -251,7 +226,7 @@ export default function Home() {
 
         {/* ── Closing CTA ── */}
         <section className="px-6 pb-24">
-          <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border-2 border-zinc-950 bg-emerald-800 px-8 py-16 text-center shadow-[6px_6px_0_0_#09090b] sm:px-16 lg:py-20">
+          <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border-2 border-zinc-950 bg-zinc-950 px-8 py-16 text-center shadow-[6px_6px_0_0_#09090b] sm:px-16 lg:py-20">
             <div aria-hidden="true"
               className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:22px_22px]" />
             {[
@@ -272,7 +247,7 @@ export default function Home() {
               <h2 className="isolate font-display text-4xl font-extrabold tracking-[-0.03em] text-white sm:text-6xl">
                 Start with <span className="text-lime-300">one lesson.</span>
               </h2>
-              <p className="mx-auto mt-4 max-w-md text-lg text-emerald-100">
+              <p className="mx-auto mt-4 max-w-md text-lg text-zinc-300">
                 Free, no sign-up, and it works on the phone in your pocket.
               </p>
               <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
